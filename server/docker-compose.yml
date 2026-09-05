@@ -7,4 +7,4 @@ services:
       - .env
     environment:
       - TZ=Asia/Jerusalem
-    restart: "no
+    restart: "no"

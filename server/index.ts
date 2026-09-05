@@ -13,7 +13,7 @@ async function runScraper(): Promise<void> {
         }
 
         const credentials: ScraperCredentials = {
-            id: username, // For Hapoalim this is usually the user code/ID
+            userCode: username, // Hapoalim uses userCode, not id!
             password: password,
         };
 
@@ -24,7 +24,11 @@ async function runScraper(): Promise<void> {
         const options: ScraperOptions = {
             companyId: CompanyTypes.hapoalim,
             startDate: startDate,
-            showBrowser: false,
+            showBrowser: true,
+            // @ts-ignore - Pass puppeteer args to bypass docker root sandbox restrictions
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            // @ts-ignore
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         };
 
         const scraper = createScraper(options);

@@ -49,5 +49,15 @@ export async function saveTransactionsToSheet(accounts: any[]) {
                 await sheet.addRow({
                     Id: uniqueId,
                     Date: tx.date,
-                    Description: tx.desc
-<truncated 310 bytes>
+                    Description: tx.description,
+                    Amount: tx.chargedAmount,
+                    Status: tx.status,
+                    Account: account.accountNumber
+                });
+                addedCount++;
+            }
+        }
+    }
+
+    return addedCount;
+}

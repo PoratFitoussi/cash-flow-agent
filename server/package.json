@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsx server.ts",
+    "start:dev": "tsx watch server.ts",
+    "scrape": "tsx index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:api": "tsx server.ts"
   },
   "keywords": [],
   "author": "poratf",
@@ -18,7 +22,15 @@
     "google-auth-library": "^11.0.2",
     "google-spreadsheet": "^5.3.0",
     "israeli-bank-scrapers": "^6.8.0",
+    "pg": "^8.23.0",
+    "playwright": "^1.63.0",
     "puppeteer": "^25.10.0",
     "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.13"
   }
 }

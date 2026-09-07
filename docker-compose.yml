@@ -1,26 +1,48 @@
 version: '3.8'
 
 services:
-  client:
-    build:
-      context: ./client
-    ports:
-      - "5173:5173"
+  db:
+    image: postgres:15-alpine
+    container_name: cash-flow-db
     environment:
-      - NODE_ENV=development
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cashflow
+    ports:
+      - "5432:5432"
     volumes:
-      - ./client:/app
-      - /app/node_modules
-    restart: "no"
+      - pgdata:/var/lib/postgresql/data
 
-  server:
+  api:
     build:
       context: ./server
-    env_file:
-      - ./server/.env
-    environment:
-      - TZ=Asia/Jerusalem
+      dockerfile: Dockerfile
+    container_name: cash-flow-api
+    ports:
+      - "3001:3001"
     volumes:
       - ./server:/usr/src/app
       - /usr/src/app/node_modules
-    restart: "no"
+      - ./server/browser_data:/usr/src/app/browser_data
+    environment:
+      - DATABASE_URL=postgres://admin:password@db:5432/cashflow
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: cash-flow-frontend
+    ports:
+      - "5173-5174:5173-5174"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

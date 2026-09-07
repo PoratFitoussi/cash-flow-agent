@@ -23,5 +23,7 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Default command to run the scraper
-CMD ["npx", "tsx", "index.ts"]
+EXPOSE 3001
+
+# Default command to run the API server
+CMD ["npm", "run", "start:api"]

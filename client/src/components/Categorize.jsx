@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Settings } from 'lucide-react';
-import './Categorize.css';
 
 const Categorize = () => {
   const [swipeDirection, setSwipeDirection] = useState('');

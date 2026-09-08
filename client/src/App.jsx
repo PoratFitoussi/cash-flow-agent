@@ -1,37 +1,21 @@
-import React, { useState } from 'react';
-import Navigation from './components/Navigation';
-import Dashboard from './components/Dashboard';
-import Categorize from './components/Categorize';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import ExpensesList from './Expenses/components/ExpensesList';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('home');
-
   return (
-    <>
-      <div className="scrollable-content">
-        {activeTab === 'home' && <Dashboard />}
-        {activeTab === 'categorize' && <Categorize />}
-        {activeTab === 'budgets' && (
-          <div className="p-6 text-center text-text-secondary">
-            <h2 className="text-xl font-semibold text-text-primary mb-2">Budgets</h2>
-            <p>Coming soon...</p>
+    <div className="w-full min-h-screen text-text-primary flex flex-col p-6">
+      <Routes>
+        <Route path="/" element={
+          <div className="flex flex-col w-full h-full max-w-lg mx-auto">
+            <header className="mb-6">
+              <h1 className="text-2xl font-bold text-text-primary">Recent Expenses</h1>
+            </header>
+            <ExpensesList />
           </div>
-        )}
-        {activeTab === 'goals' && (
-          <div className="p-6 text-center text-text-secondary">
-            <h2 className="text-xl font-semibold text-text-primary mb-2">Goals</h2>
-            <p>Coming soon...</p>
-          </div>
-        )}
-        {activeTab === 'settings' && (
-          <div className="p-6 text-center text-text-secondary">
-            <h2 className="text-xl font-semibold text-text-primary mb-2">Settings</h2>
-            <p>Coming soon...</p>
-          </div>
-        )}
-      </div>
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
-    </>
+        } />
+      </Routes>
+    </div>
   );
 }
 

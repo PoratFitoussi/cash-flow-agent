@@ -17,20 +17,13 @@
   body {
     @apply bg-dark-bg text-text-primary antialiased;
     font-family: var(--font-sans);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
     margin: 0;
   }
   
   #root {
     width: 100%;
-    max-width: 480px;
-    height: 100vh;
-    max-height: 100vh;
+    min-height: 100vh;
     @apply bg-dark-bg relative flex flex-col;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
   }
 
   @supports (height: 100dvh) {

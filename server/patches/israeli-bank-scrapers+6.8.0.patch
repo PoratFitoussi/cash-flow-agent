@@ -1,0 +1,112 @@
+diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
+index 4ffa0b2..eaa5445 100644
+--- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
++++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
+@@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
+     transactions: res
+   };
+ }
++async function fetchGetWithHeaders(page, url, pageUuid) {
++  const cookies = await page.cookies();
++  const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
++  const xsrfToken = XSRFCookie ? XSRFCookie.value : '';
++  const result = await page.evaluate(async (fetchUrl, fetchToken, fetchUuid) => {
++    // Generate UUID inside evaluate since crypto might not be available easily without it
++    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
++      const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
++      return v.toString(16);
++    });
++    const response = await fetch(fetchUrl, {
++      method: 'GET',
++      headers: {
++        'X-XSRF-TOKEN': fetchToken,
++        'pageUuid': fetchUuid,
++        'uuid': uuid
++      }
++    });
++    return response.json();
++  }, url, xsrfToken, pageUuid);
++  return result;
++}
++
+ async function getAccountTransactions(baseUrl, apiSiteUrl, page, accountNumber, startDate, endDate, additionalTransactionInformation = false, options) {
+   const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
+   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
++  
++  if (txnsResult && txnsResult.transactions) {
++    try {
++      const directTxns = txnsResult.transactions.filter(t => t.activityDescription && t.activityDescription.includes('דירקט'));
++      if (directTxns.length > 0) {
++        // Cache to prevent fetching the same cardId multiple times
++        const cardIdCache = {}; 
++        
++        for (const t of directTxns) {
++          const debitDateStr = t.eventDate.toString();
++          const debitDate = debitDateStr.substring(0,4) + '-' + debitDateStr.substring(4,6) + '-' + debitDateStr.substring(6,8);
++          const cardSuffix = t.referenceNumber;
++          
++          if (!cardSuffix) continue;
++          
++          let cardId = cardIdCache[cardSuffix];
++          if (!cardId && !cardIdCache['__fetched_all__']) {
++            // Fetch ALL cards at once to avoid doing it per suffix, especially since some suffixes 
++            // might not work individually.
++            const cardsUrl = `https://login.bankhapoalim.co.il/bnhp-api/credit-card/cards-account/v7.1/self/cards?_lang=he-IL`;
++            try {
++              const cardsResponse = await fetchGetWithHeaders(page, cardsUrl, '/current-account/transactions') || {};
++              if (cardsResponse.data && cardsResponse.data.length) {
++                for (const card of cardsResponse.data) {
++                  if (card.cardIdentifiers) {
++                    const id = card.cardIdentifiers.cardIdHapoalim;
++                    const suffix = card.cardIdentifiers.cardAdditionalIdentifiers?.cardSuffix;
++                    if (suffix && id) {
++                      cardIdCache[parseInt(suffix, 10)] = id;
++                      // Also cache by string just in case
++                      cardIdCache[suffix.toString()] = id;
++                    }
++                  }
++                }
++              }
++            } catch (e) {}
++            cardIdCache['__fetched_all__'] = true;
++            cardId = cardIdCache[cardSuffix];
++          }
++          
++          if (cardId) {
++            const directUrl = `https://login.bankhapoalim.co.il/bnhp-api/credit-card/card-details/v6/transactions/${cardId}/direct?debitDate=${debitDate}&debitCurrencyCode=0&_lang=he-IL`;
++            try {
++              const directDetails = await fetchGetWithHeaders(page, directUrl, '/current-account/transactions') || {};
++              const directData = directDetails.data || [];
++              
++              if (directData.length > 0) {
++                // If it's a cumulative transaction, we should split it into multiple rows!
++                if (t.activityDescription.includes('מצטבר')) {
++                  const tIndex = txnsResult.transactions.indexOf(t);
++                  if (tIndex > -1) {
++                    txnsResult.transactions.splice(tIndex, 1);
++                  }
++                  
++                  for (const d of directData) {
++                    const newTxn = { ...t };
++                    newTxn.activityDescription = d.merchantName || 'דירקט';
++                    newTxn.eventAmount = Math.abs(d.originalAmount);
++                    newTxn.beneficiaryDetailsData = null; // Clear memo so it doesn't append generic text
++                    txnsResult.transactions.push(newTxn);
++                  }
++                } else {
++                  const match = directData.find(d => Math.abs(d.originalAmount) === Math.abs(t.eventAmount));
++                  if (match && match.merchantName) {
++                    t.activityDescription = match.merchantName;
++                  }
++                }
++              }
++            } catch (e) {}
++          }
++        }
++      }
++    } catch (e) {}
++  }
++
+   const finalResult = additionalTransactionInformation && txnsResult?.transactions.length ? await getExtraScrap(txnsResult, baseUrl, page, accountNumber) : txnsResult;
+   return convertTransactions(finalResult?.transactions ?? [], options);
+ }

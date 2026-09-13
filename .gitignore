@@ -26,3 +26,4 @@ dist-ssr
 *.sln
 *.sw?
 browser_data
+scraper_result.json

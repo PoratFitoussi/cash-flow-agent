@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, numeric, timestamp, boolean, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, numeric, timestamp, boolean, pgEnum, index, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // --- Enums ---
@@ -21,15 +21,43 @@ export const usersRelations = relations(users, ({ many }) => ({
 // --- Categories Table ---
 export const categories = pgTable("categories", {
   id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  icon: text("icon"), // e.g. emoji like 🛒
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  icon: varchar("icon", { length: 255 }), // e.g. emoji like 🛒
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
 });
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   transactions: many(transactions),
   budgets: many(budgets),
+  merchantCategoryMappings: many(merchantCategoryMappings),
 }));
+
+// --- Merchant Category Mappings Table ---
+export const merchantCategoryMappings = pgTable("merchant_category_mappings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  merchantName: varchar("merchant_name", { length: 255 }).notNull().unique(),
+  categoryId: uuid("category_id").references(() => categories.id).notNull(),
+  renameTo: varchar("rename_to", { length: 255 }), // new: clean name
+  ownerName: varchar("owner_name", { length: 255 }), // new: assign owner
+  confidenceScore: integer("confidence_score").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const merchantCategoryMappingsRelations = relations(merchantCategoryMappings, ({ one }) => ({
+  category: one(categories, {
+    fields: [merchantCategoryMappings.categoryId],
+    references: [categories.id],
+  }),
+}));
+
+// --- Card Owners Mapping Table ---
+export const cardOwners = pgTable("card_owners", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  accountId: text("account_id").notNull().unique(), // Last 4 digits or identifier
+  ownerName: varchar("owner_name", { length: 255 }).notNull(), // e.g. "Porat"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 // --- Transactions Table ---
 export const transactions = pgTable('transactions', {
@@ -42,9 +70,14 @@ export const transactions = pgTable('transactions', {
   source: transactionSourceEnum('source').notNull(),
   paymentMethod: text('payment_method').notNull(), 
   merchant: text('merchant').notNull(), // Restored from original
+  originalMerchant: varchar('original_merchant', { length: 255 }),
   isTemplate: boolean('is_template').default(false).notNull(), // Restored from original
   accountId: text('account_id'), // Restored from original
   receiptImageUrl: text('receipt_image_url'),
+  cardOwner: varchar('card_owner', { length: 255 }),
+  isFixed: boolean('is_fixed').default(false).notNull(),
+  notes: text('notes'),
+  status: varchar('status', { length: 50 }).default('PENDING').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => {
   return {

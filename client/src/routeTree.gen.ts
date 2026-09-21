@@ -11,7 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CashRouteImport } from './routes/cash'
-import { Route as SwipeRouteImport } from './routes/swipe'
+import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ExpensesNewRouteImport } from './routes/expenses/new'
 import { Route as ExpensesUploadRouteImport } from './routes/expenses/upload'
 
@@ -25,9 +26,14 @@ const CashRoute = CashRouteImport.update({
   path: '/cash',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SwipeRoute = SwipeRouteImport.update({
-  id: '/swipe',
-  path: '/swipe',
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesNewRoute = ExpensesNewRouteImport.update({
@@ -44,14 +50,16 @@ const ExpensesUploadRoute = ExpensesUploadRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cash': typeof CashRoute
-  '/swipe': typeof SwipeRoute
+  '/categories': typeof CategoriesRoute
+  '/settings': typeof SettingsRoute
   '/expenses/new': typeof ExpensesNewRoute
   '/expenses/upload': typeof ExpensesUploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cash': typeof CashRoute
-  '/swipe': typeof SwipeRoute
+  '/categories': typeof CategoriesRoute
+  '/settings': typeof SettingsRoute
   '/expenses/new': typeof ExpensesNewRoute
   '/expenses/upload': typeof ExpensesUploadRoute
 }
@@ -59,23 +67,43 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cash': typeof CashRoute
-  '/swipe': typeof SwipeRoute
+  '/categories': typeof CategoriesRoute
+  '/settings': typeof SettingsRoute
   '/expenses/new': typeof ExpensesNewRoute
   '/expenses/upload': typeof ExpensesUploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cash' | '/swipe' | '/expenses/new' | '/expenses/upload'
+  fullPaths:
+    | '/'
+    | '/cash'
+    | '/categories'
+    | '/settings'
+    | '/expenses/new'
+    | '/expenses/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cash' | '/swipe' | '/expenses/new' | '/expenses/upload'
+  to:
+    | '/'
+    | '/cash'
+    | '/categories'
+    | '/settings'
+    | '/expenses/new'
+    | '/expenses/upload'
   id:
-    '__root__' | '/' | '/cash' | '/swipe' | '/expenses/new' | '/expenses/upload'
+    | '__root__'
+    | '/'
+    | '/cash'
+    | '/categories'
+    | '/settings'
+    | '/expenses/new'
+    | '/expenses/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CashRoute: typeof CashRoute
-  SwipeRoute: typeof SwipeRoute
+  CategoriesRoute: typeof CategoriesRoute
+  SettingsRoute: typeof SettingsRoute
   ExpensesNewRoute: typeof ExpensesNewRoute
   ExpensesUploadRoute: typeof ExpensesUploadRoute
 }
@@ -96,11 +124,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CashRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/swipe': {
-      id: '/swipe'
-      path: '/swipe'
-      fullPath: '/swipe'
-      preLoaderRoute: typeof SwipeRouteImport
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses/new': {
@@ -123,7 +158,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CashRoute: CashRoute,
-  SwipeRoute: SwipeRoute,
+  CategoriesRoute: CategoriesRoute,
+  SettingsRoute: SettingsRoute,
   ExpensesNewRoute: ExpensesNewRoute,
   ExpensesUploadRoute: ExpensesUploadRoute,
 }

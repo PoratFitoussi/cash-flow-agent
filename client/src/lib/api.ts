@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001/api`;
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   // Assume token is stored in localStorage or handled via context in a real app.

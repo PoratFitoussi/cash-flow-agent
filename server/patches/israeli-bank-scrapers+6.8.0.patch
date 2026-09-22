@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..0a73c63 100644
+index 4ffa0b2..0b74fe7 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -110,7 +110,7 @@ index 4ffa0b2..0a73c63 100644
    const finalResult = additionalTransactionInformation && txnsResult?.transactions.length ? await getExtraScrap(txnsResult, baseUrl, page, accountNumber) : txnsResult;
    return convertTransactions(finalResult?.transactions ?? [], options);
  }
-@@ -163,8 +261,25 @@ async function fetchAccountData(page, baseUrl, options) {
+@@ -163,8 +261,30 @@ async function fetchAccountData(page, baseUrl, options) {
  }
  function getPossibleLoginResults(baseUrl) {
    const urls = {};
@@ -126,8 +126,13 @@ index 4ffa0b2..0a73c63 100644
 +      await new Promise(r => setTimeout(r, 2000));
 +      const currentUrl = await page.evaluate(() => window.location.href);
 +      if (currentUrl.toLowerCase().includes('errorcode')) return false;
-+      // If we are on an unrecognized URL but there's no password field, assume success to bypass UNKNOWN_ERROR
++      // If we are on an unrecognized URL but there's no password field AND no OTP field, assume success to bypass UNKNOWN_ERROR
 +      const hasPassword = await page.evaluate(() => !!document.querySelector('input[type="password"]'));
++      const hasOtp = await page.evaluate(() => !!document.querySelector('input[type="tel"]') || document.body.innerText.includes('קוד') || document.body.innerText.includes('SMS'));
++      if (hasOtp) {
++          console.log("OTP screen still visible! Login failed (code likely rejected).");
++          return false;
++      }
 +      return !hasPassword;
 +    }
 +  ];
@@ -138,7 +143,7 @@ index 4ffa0b2..0a73c63 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +301,100 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,104 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -193,7 +198,11 @@ index 4ffa0b2..0a73c63 100644
 +                return 'input'; // fallback
 +            });
 +            
-+            await this.page.type(inputSelector, code, { delay: 100 });
++            await this.page.focus(inputSelector);
++            for (const char of code) {
++                await this.page.keyboard.press(char);
++                await new Promise(r => setTimeout(r, 100)); // wait for auto-advance JS
++            }
 +            
 +            const btnSelector = await this.page.evaluate(() => {
 +                const buttons = Array.from(document.querySelectorAll('button'));

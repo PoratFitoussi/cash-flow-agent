@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..0b74fe7 100644
+index 4ffa0b2..c9495a1 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..0b74fe7 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,104 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,106 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -189,8 +189,9 @@ index 4ffa0b2..0b74fe7 100644
 +            
 +            // Assume there's a tel input or a specific id for the code
 +            const inputSelector = await this.page.evaluate(() => {
-+                const inputs = Array.from(document.querySelectorAll('input'));
-+                const telInput = inputs.find(i => i.type === 'tel' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code') || i.type === 'password' || i.type === 'text');
++                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
++                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible);
++                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code') || i.type === 'password' || i.type === 'text');
 +                if (telInput) {
 +                    if (!telInput.id) telInput.id = 'injected-otp-input';
 +                    return '#' + telInput.id;
@@ -205,11 +206,12 @@ index 4ffa0b2..0b74fe7 100644
 +            }
 +            
 +            const btnSelector = await this.page.evaluate(() => {
-+                const buttons = Array.from(document.querySelectorAll('button'));
++                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
++                const buttons = Array.from(document.querySelectorAll('button')).filter(isVisible);
 +                // Exclude buttons that have "שוב" (again) or "חדש" (new) to avoid "Resend code"
 +                const submitBtn = buttons.find(b => {
 +                    const text = b.innerText || '';
-+                    if (text.includes('שוב') || text.includes('חדש')) return false;
++                    if (text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || text.includes('חזור')) return false;
 +                    return b.type === 'submit' || text.includes('אישור') || text.includes('המשך') || text.includes('כניסה');
 +                });
 +                if (submitBtn) {

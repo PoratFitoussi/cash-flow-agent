@@ -135,7 +135,7 @@ apiRouter.post('/sync', async (req: any, res) => {
     res.json({ success: true, insertedCount });
   } catch (error: any) {
     console.error("Sync error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || error.toString(), stack: error.stack });
   }
 });
 

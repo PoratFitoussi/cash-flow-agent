@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..3bbf7b3 100644
+index 4ffa0b2..bcc88db 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -138,7 +138,7 @@ index 4ffa0b2..3bbf7b3 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +301,91 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +301,95 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -205,12 +205,16 @@ index 4ffa0b2..3bbf7b3 100644
 +                return 'button'; // fallback
 +            });
 +            
-+            await Promise.all([
-+              this.page.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {}), // Ignore timeouts
-+              this.page.click(btnSelector)
-+            ]);
++            await this.page.click(btnSelector);
 +            
-+            return; // We handled the OTP, now exit postAction
++            console.log("OTP submitted. Waiting for dashboard to load...");
++            for (let j = 0; j < 30; j++) {
++                await new Promise(r => setTimeout(r, 1000));
++                const url = await this.page.evaluate(() => window.location.href.toLowerCase());
++                if (url.includes('homepage') || url.includes('errorcode')) break;
++            }
++            
++            return; // We handled the OTP and waited for navigation, now exit postAction
 +          }
 +        }
 +        

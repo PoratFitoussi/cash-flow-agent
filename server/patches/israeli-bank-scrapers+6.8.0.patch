@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..529944f 100644
+index 4ffa0b2..644e3a4 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..529944f 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,156 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,166 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -204,15 +204,25 @@ index 4ffa0b2..529944f 100644
 +            // Assume there's a tel input or a specific id for the code
 +            const inputSelector = await this.page.evaluate(() => {
 +                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-+                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible);
-+                console.log("Visible inputs:", inputs.map(i => ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder })));
 +                
-+                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code') || i.type === 'password' || i.type === 'text');
++                // EXCLUDE the original login fields that might still be in the DOM
++                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible).filter(i => i.id !== 'userCode' && i.type !== 'password' && i.id !== 'verifyPassword');
++                
++                console.log("Visible OTP inputs:", inputs.map(i => ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder })));
++                
++                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code') || i.type === 'text');
 +                if (telInput) {
 +                    if (!telInput.id) telInput.id = 'injected-otp-input';
 +                    return '#' + telInput.id;
 +                }
-+                return 'input'; // fallback
++                
++                // Absolute fallback: just pick the first visible input that isn't the login ones
++                if (inputs.length > 0) {
++                    if (!inputs[0].id) inputs[0].id = 'injected-otp-fallback';
++                    return '#' + inputs[0].id;
++                }
++                
++                return 'input'; // worst case
 +            });
 +            
 +            console.log("Selected input selector:", inputSelector);

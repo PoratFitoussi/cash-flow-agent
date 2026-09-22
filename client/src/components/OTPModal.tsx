@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 export function OTPModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [code, setCode] = useState('');
-  const [session, setSession] = useState<{ sessionId: string, companyId: string } | null>(null);
+  const [session, setSession] = useState<{ sessionId: string, companyId: string, screenshot?: string } | null>(null);
 
   useEffect(() => {
     // Setup SSE Connection
@@ -45,12 +45,12 @@ export function OTPModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden my-8"
           >
             <div className="p-6">
               <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -62,6 +62,17 @@ export function OTPModal() {
               <p className="text-sm text-slate-400 text-center mb-6">
                 Your bank ({session?.companyId}) has requested an SMS verification code to proceed.
               </p>
+
+              {session?.screenshot && (
+                <div className="mb-6 rounded-lg overflow-hidden border border-slate-700">
+                  <p className="text-xs text-center text-slate-500 bg-slate-800 py-1">Current Bank Screen</p>
+                  <img 
+                    src={`data:image/png;base64,${session.screenshot}`} 
+                    alt="Bank Security Screen" 
+                    className="w-full max-h-64 object-contain bg-white"
+                  />
+                </div>
+              )}
               
               <form onSubmit={handleSubmit}>
                 <input

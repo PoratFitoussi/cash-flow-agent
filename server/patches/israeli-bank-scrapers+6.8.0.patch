@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..644e3a4 100644
+index 4ffa0b2..eda20f6 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..644e3a4 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,166 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,173 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -202,15 +202,22 @@ index 4ffa0b2..644e3a4 100644
 +            clearTimeout(this._otpTimeout);
 +            
 +            // Assume there's a tel input or a specific id for the code
++            // Assume there's a tel input or a specific id for the code
 +            const inputSelector = await this.page.evaluate(() => {
 +                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 +                
 +                // EXCLUDE the original login fields that might still be in the DOM
-+                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible).filter(i => i.id !== 'userCode' && i.type !== 'password' && i.id !== 'verifyPassword');
++                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible)
++                    .filter(i => {
++                        const id = (i.id || '').toLowerCase();
++                        const name = (i.name || '').toLowerCase();
++                        const type = (i.type || '').toLowerCase();
++                        return !id.includes('usercode') && !id.includes('password') && !name.includes('password') && type !== 'password' && type !== 'hidden';
++                    });
 +                
-+                console.log("Visible OTP inputs:", inputs.map(i => ({ id: i.id, name: i.name, type: i.type, placeholder: i.placeholder })));
++                console.log("Visible OTP inputs JSON: " + JSON.stringify(inputs.map(i => ({ id: i.id, name: i.name, type: i.type }))));
 +                
-+                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code') || i.type === 'text');
++                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || (i.name || '').toLowerCase().includes('code') || (i.id || '').toLowerCase().includes('code') || i.type === 'text');
 +                if (telInput) {
 +                    if (!telInput.id) telInput.id = 'injected-otp-input';
 +                    return '#' + telInput.id;

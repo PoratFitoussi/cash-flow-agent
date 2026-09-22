@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..e0ced36 100644
+index 4ffa0b2..90e3f98 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..e0ced36 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,177 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,183 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -220,18 +220,24 @@ index 4ffa0b2..e0ced36 100644
 +            
 +            if (numOtpInputs > 1) {
 +                // It's a multi-box OTP input (e.g., 5 or 6 boxes)
-+                for (let i = 0; i < numOtpInputs; i++) {
-+                    const handle = await this.page.evaluateHandle((arr, idx) => arr[idx], otpInputHandles, i);
-+                    await handle.focus();
-+                    // Some multi-box inputs auto-advance, but typing individually ensures it works
-+                    await handle.type(code[i] || '', { delay: 50 });
++                // We MUST let the bank's JS handle the auto-advance. Manually focusing each box breaks Angular.
++                const handle = await this.page.evaluateHandle((arr, idx) => arr[idx], otpInputHandles, 0);
++                await handle.focus();
++                
++                for (const char of code) {
++                    await this.page.keyboard.press(char);
++                    await new Promise(r => setTimeout(r, 150)); // Wait for JS to auto-advance to next box
 +                }
 +            } else if (numOtpInputs === 1) {
 +                // Single input box
 +                const handle = await this.page.evaluateHandle(arr => arr[0], otpInputHandles);
 +                await handle.focus();
 +                await handle.evaluate(el => el.value = ''); // clear first
-+                await handle.type(code, { delay: 100 });
++                
++                for (const char of code) {
++                    await this.page.keyboard.press(char);
++                    await new Promise(r => setTimeout(r, 100));
++                }
 +            } else {
 +                console.log("CRITICAL ERROR: No OTP inputs found at all!");
 +            }

@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..ec6929e 100644
+index 4ffa0b2..b699104 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..ec6929e 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,185 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,169 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -237,11 +237,14 @@ index 4ffa0b2..ec6929e 100644
 +            // Use Puppeteer's native type method which is 100% compatible with Angular
 +            await this.page.type(inputSelector, code, { delay: 100 });
 +            
-+            // Wait 2 seconds to see if the page auto-submits
-+            console.log("Waiting 2s to check for auto-submit...");
++            // Press Enter to submit the form safely without guessing button names
++            await this.page.keyboard.press('Enter');
++            console.log("Pressed Enter key to submit OTP.");
++            
++            // Wait 2 seconds to see if it submits (or auto-submits)
 +            await new Promise(r => setTimeout(r, 2000));
 +            
-+            // If the OTP input is no longer visible, it auto-submitted!
++            // If the OTP input is still visible, try exact match button click as fallback
 +            const isInputStillVisible = await this.page.evaluate(() => {
 +                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 +                const inputs = Array.from(document.querySelectorAll('input'))
@@ -256,50 +259,31 @@ index 4ffa0b2..ec6929e 100644
 +            });
 +            
 +            if (isInputStillVisible) {
-+                console.log("No auto-submit detected. Looking for submit button.");
++                // Strict fallback: only click if a button EXACTLY matches "אישור", "המשך", or "אימות"
 +                const btnSelector = await this.page.evaluate(() => {
 +                    const buttons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], a[role="button"]'))
 +                        .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length))
-+                        .filter(b => !(b.className || '').includes('login-btn')); // CRITICAL: Exclude original login button
++                        .filter(b => !(b.className || '').includes('login-btn'));
 +                    
 +                    const submitBtn = buttons.find(b => {
 +                        const text = (b.innerText || '').trim();
 +                        const val = (b.value || '').trim();
-+                        
-+                        // Strict negative check: If it has "again", "new", "cancel", ignore it entirely!
-+                        if (text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || text.includes('חזור') || text.includes('שנית')) return false;
-+                        if (val.includes('שוב') || val.includes('חדש') || val.includes('ביטול') || val.includes('חזור') || val.includes('שנית')) return false;
-+                        
-+                        return text.includes('אישור') || text.includes('המשך') || text.includes('שלח') || text.includes('אימות') || val.includes('אישור') || val.includes('המשך') || val.includes('שלח') || val.includes('אימות');
++                        return text === 'אישור' || text === 'המשך' || text === 'אימות' || val === 'אישור' || val === 'המשך' || val === 'אימות';
 +                    });
 +                    
 +                    if (submitBtn) {
-+                        if (!submitBtn.id) submitBtn.id = 'injected-otp-submit';
++                        if (!submitBtn.id) submitBtn.id = 'injected-otp-submit-exact';
 +                        return '#' + submitBtn.id;
-+                    }
-+                    
-+                    // Fallback: click the last button on the page that isn't resend
-+                    const validButtons = buttons.filter(b => {
-+                        const text = (b.innerText || '').trim();
-+                        const val = (b.value || '').trim();
-+                        return !(text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || val.includes('שוב') || val.includes('חדש') || val.includes('ביטול'));
-+                    });
-+                    
-+                    if (validButtons.length > 0) {
-+                        const fallbackBtn = validButtons[validButtons.length - 1];
-+                        if (!fallbackBtn.id) fallbackBtn.id = 'injected-otp-fallback-btn';
-+                        return '#' + fallbackBtn.id;
 +                    }
 +                    return null;
 +                });
 +                
-+                console.log("Selected button selector:", btnSelector);
-+                
 +                if (btnSelector) {
-+                    await this.page.click(btnSelector);
++                    console.log("Clicking exact-match submit button:", btnSelector);
++                    await this.page.click(btnSelector).catch(() => {});
 +                }
 +            } else {
-+                console.log("Input disappeared! Auto-submit successful.");
++                console.log("Input disappeared! Enter key submission successful.");
 +            }
 +            
 +            console.log("OTP submitted. Waiting for dashboard to load...");

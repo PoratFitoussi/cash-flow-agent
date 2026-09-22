@@ -11,14 +11,14 @@ export async function runScraper(options: ScraperOptions, credentials: ScraperCr
   const sessionId = Math.random().toString(36).substring(7);
 
   // Listen for the custom OTP event injected via our patch-package modifications
-  (scraper as any).on('onOtpRequired', (data: any) => {
+  (scraper as any).eventEmitter.on('onOtpRequired', (companyId: string, payload: any) => {
     console.log(`[scraper.service] Received onOtpRequired from scraper for session ${sessionId}`);
     
     // Store the actual scraper instance so we can call submitOtp on it later
     pendingScrapers.set(sessionId, scraper);
     
     // Alert the frontend
-    scraperEvents.emit('AWAITING_OTP', { sessionId, companyId: options.companyId });
+    scraperEvents.emit('AWAITING_OTP', { sessionId, companyId, screenshot: payload?.screenshot });
   });
 
   scraper.onProgress((companyId, msg) => {

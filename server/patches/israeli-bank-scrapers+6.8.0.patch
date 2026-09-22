@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..bcea431 100644
+index 4ffa0b2..529944f 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..bcea431 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,149 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,156 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -158,14 +158,21 @@ index 4ffa0b2..bcea431 100644
 +          });
 +          if (isDone) return; // Break out, let the scraper's normal logic handle success/error
 +          
-+          // Check if OTP is required
++          // Check if OTP is required by looking at the URL or specific explicit text
 +          const isOtp = await this.page.evaluate(() => {
 +            const url = window.location.href.toLowerCase();
 +            if (url.includes('homepage') || url.includes('ng-portals/rb/he/homepage')) return false;
-+            // Look for typical OTP indicators on the page
++            
++            // If the URL is the auth portal, it's the OTP screen!
++            if (url.includes('auth/he')) return true;
++            
++            // Strict fallback: ensure the login fields are GONE
++            const userCodeInput = document.querySelector('#userCode');
++            if (userCodeInput && userCodeInput.offsetWidth > 0) return false; // Still on login screen!
++            
 +            const text = document.body.innerText;
-+            const hasOtpInput = !!document.querySelector('input[type="tel"]') || !!document.querySelector('input[type="password"]');
-+            return hasOtpInput || text.includes('קוד') || text.includes('SMS');
++            const hasSmsCode = text.includes('SMS') && (text.includes('קוד') || text.includes('אימות'));
++            return hasSmsCode;
 +          });
 +          
 +          if (isOtp) {

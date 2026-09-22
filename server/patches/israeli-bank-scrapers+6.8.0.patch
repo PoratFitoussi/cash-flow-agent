@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..a20cd12 100644
+index 4ffa0b2..ec6929e 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..a20cd12 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,178 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,185 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -258,18 +258,19 @@ index 4ffa0b2..a20cd12 100644
 +            if (isInputStillVisible) {
 +                console.log("No auto-submit detected. Looking for submit button.");
 +                const btnSelector = await this.page.evaluate(() => {
-+                    const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-+                    const buttons = Array.from(document.querySelectorAll('button')).filter(isVisible);
-+                    console.log("Visible buttons:", buttons.map(b => ({ id: b.id, text: b.innerText, type: b.type })));
++                    const buttons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], a[role="button"]'))
++                        .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length))
++                        .filter(b => !(b.className || '').includes('login-btn')); // CRITICAL: Exclude original login button
 +                    
-+                    // We MUST avoid the "Resend Code" button!
 +                    const submitBtn = buttons.find(b => {
 +                        const text = (b.innerText || '').trim();
-+                        // If it contains "again", "new", "resend", "send", ignore it!
-+                        if (text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || text.includes('חזור') || text.includes('שלח קוד') || text.includes('שנית')) return false;
++                        const val = (b.value || '').trim();
 +                        
-+                        // Only explicitly allow Confirm, Continue, Enter, Verify, etc.
-+                        return text.includes('אישור') || text.includes('המשך') || text.includes('כניסה') || text.includes('אימות') || text.includes('שלח') && !text.includes('קוד');
++                        // Strict negative check: If it has "again", "new", "cancel", ignore it entirely!
++                        if (text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || text.includes('חזור') || text.includes('שנית')) return false;
++                        if (val.includes('שוב') || val.includes('חדש') || val.includes('ביטול') || val.includes('חזור') || val.includes('שנית')) return false;
++                        
++                        return text.includes('אישור') || text.includes('המשך') || text.includes('שלח') || text.includes('אימות') || val.includes('אישור') || val.includes('המשך') || val.includes('שלח') || val.includes('אימות');
 +                    });
 +                    
 +                    if (submitBtn) {
@@ -277,10 +278,16 @@ index 4ffa0b2..a20cd12 100644
 +                        return '#' + submitBtn.id;
 +                    }
 +                    
-+                    // Extreme fallback: find the button that is likely the primary action (usually has a specific class like 'btn-primary' or is the last button)
-+                    const fallbackBtn = buttons[buttons.length - 1];
-+                    if (fallbackBtn) {
-+                        if (!fallbackBtn.id) fallbackBtn.id = 'injected-otp-submit';
++                    // Fallback: click the last button on the page that isn't resend
++                    const validButtons = buttons.filter(b => {
++                        const text = (b.innerText || '').trim();
++                        const val = (b.value || '').trim();
++                        return !(text.includes('שוב') || text.includes('חדש') || text.includes('ביטול') || val.includes('שוב') || val.includes('חדש') || val.includes('ביטול'));
++                    });
++                    
++                    if (validButtons.length > 0) {
++                        const fallbackBtn = validButtons[validButtons.length - 1];
++                        if (!fallbackBtn.id) fallbackBtn.id = 'injected-otp-fallback-btn';
 +                        return '#' + fallbackBtn.id;
 +                    }
 +                    return null;

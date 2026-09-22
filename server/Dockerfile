@@ -18,6 +18,7 @@ WORKDIR /usr/src/app
 
 # Copy dependency definitions and install them
 COPY package*.json ./
+COPY patches/ ./patches/
 RUN npm install
 
 # Copy the rest of the application code

@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..90e3f98 100644
+index 4ffa0b2..a20cd12 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..90e3f98 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,183 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,178 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -201,11 +201,10 @@ index 4ffa0b2..90e3f98 100644
 +            const code = await this._otpPromise;
 +            clearTimeout(this._otpTimeout);
 +            
-+            // Assume there's a tel input or a specific id for the code
-+            // Assume there's a tel input or a specific id for the code
-+            const otpInputHandles = await this.page.evaluateHandle(() => {
++            // Find the exact OTP input box
++            const inputSelector = await this.page.evaluate(() => {
 +                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-+                return Array.from(document.querySelectorAll('input'))
++                const inputs = Array.from(document.querySelectorAll('input'))
 +                    .filter(isVisible)
 +                    .filter(i => {
 +                        const id = (i.id || '').toLowerCase();
@@ -213,36 +212,32 @@ index 4ffa0b2..90e3f98 100644
 +                        const type = (i.type || '').toLowerCase();
 +                        return !id.includes('usercode') && !id.includes('password') && !name.includes('password') && type !== 'password' && type !== 'hidden';
 +                    });
++                
++                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || (i.name || '').toLowerCase().includes('code') || (i.id || '').toLowerCase().includes('code') || i.type === 'text');
++                
++                if (telInput) {
++                    if (!telInput.id) telInput.id = 'injected-otp-input';
++                    return '#' + telInput.id;
++                }
++                
++                if (inputs.length > 0) {
++                    if (!inputs[0].id) inputs[0].id = 'injected-otp-fallback';
++                    return '#' + inputs[0].id;
++                }
++                
++                return 'input';
 +            });
 +            
-+            const numOtpInputs = await this.page.evaluate(arr => arr.length, otpInputHandles);
-+            console.log("Number of real OTP inputs found:", numOtpInputs);
++            console.log("Selected input selector:", inputSelector);
 +            
-+            if (numOtpInputs > 1) {
-+                // It's a multi-box OTP input (e.g., 5 or 6 boxes)
-+                // We MUST let the bank's JS handle the auto-advance. Manually focusing each box breaks Angular.
-+                const handle = await this.page.evaluateHandle((arr, idx) => arr[idx], otpInputHandles, 0);
-+                await handle.focus();
-+                
-+                for (const char of code) {
-+                    await this.page.keyboard.press(char);
-+                    await new Promise(r => setTimeout(r, 150)); // Wait for JS to auto-advance to next box
-+                }
-+            } else if (numOtpInputs === 1) {
-+                // Single input box
-+                const handle = await this.page.evaluateHandle(arr => arr[0], otpInputHandles);
-+                await handle.focus();
-+                await handle.evaluate(el => el.value = ''); // clear first
-+                
-+                for (const char of code) {
-+                    await this.page.keyboard.press(char);
-+                    await new Promise(r => setTimeout(r, 100));
-+                }
-+            } else {
-+                console.log("CRITICAL ERROR: No OTP inputs found at all!");
-+            }
++            // Wait for the input to be ready and clear it just in case
++            await this.page.waitForSelector(inputSelector, { visible: true, timeout: 5000 }).catch(() => {});
++            await this.page.evaluate((sel) => { document.querySelector(sel).value = ''; }, inputSelector);
 +            
-+            // Wait 2 seconds to see if the page auto-submits (common in 6-box OTPs)
++            // Use Puppeteer's native type method which is 100% compatible with Angular
++            await this.page.type(inputSelector, code, { delay: 100 });
++            
++            // Wait 2 seconds to see if the page auto-submits
 +            console.log("Waiting 2s to check for auto-submit...");
 +            await new Promise(r => setTimeout(r, 2000));
 +            

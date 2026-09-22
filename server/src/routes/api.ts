@@ -15,12 +15,14 @@ apiRouter.use(requireAuth);
 apiRouter.post('/sync', async (req: any, res) => {
   const userId = req.user.id;
   try {
-    const options = {
+    const options: any = {
       companyId: (process.env.SCRAPER_COMPANY_ID as CompanyTypes) || 'hapoalim',
       startDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // last 120 days (approx 4 months)
       combineInstallments: false,
       showBrowser: false, // Set to true if debugging locally
       additionalTransactionInformation: true, // MUST be true to get real names instead of placeholders
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     };
     
     const credentials = {

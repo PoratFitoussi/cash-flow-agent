@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..eda20f6 100644
+index 4ffa0b2..59ba7b5 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -143,7 +143,7 @@ index 4ffa0b2..eda20f6 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +306,173 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +306,177 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -203,41 +203,37 @@ index 4ffa0b2..eda20f6 100644
 +            
 +            // Assume there's a tel input or a specific id for the code
 +            // Assume there's a tel input or a specific id for the code
-+            const inputSelector = await this.page.evaluate(() => {
++            const otpInputHandles = await this.page.evaluateHandle(() => {
 +                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-+                
-+                // EXCLUDE the original login fields that might still be in the DOM
-+                const inputs = Array.from(document.querySelectorAll('input')).filter(isVisible)
++                return Array.from(document.querySelectorAll('input'))
++                    .filter(isVisible)
 +                    .filter(i => {
 +                        const id = (i.id || '').toLowerCase();
 +                        const name = (i.name || '').toLowerCase();
 +                        const type = (i.type || '').toLowerCase();
 +                        return !id.includes('usercode') && !id.includes('password') && !name.includes('password') && type !== 'password' && type !== 'hidden';
 +                    });
-+                
-+                console.log("Visible OTP inputs JSON: " + JSON.stringify(inputs.map(i => ({ id: i.id, name: i.name, type: i.type }))));
-+                
-+                const telInput = inputs.find(i => i.type === 'tel' || i.type === 'number' || (i.name || '').toLowerCase().includes('code') || (i.id || '').toLowerCase().includes('code') || i.type === 'text');
-+                if (telInput) {
-+                    if (!telInput.id) telInput.id = 'injected-otp-input';
-+                    return '#' + telInput.id;
-+                }
-+                
-+                // Absolute fallback: just pick the first visible input that isn't the login ones
-+                if (inputs.length > 0) {
-+                    if (!inputs[0].id) inputs[0].id = 'injected-otp-fallback';
-+                    return '#' + inputs[0].id;
-+                }
-+                
-+                return 'input'; // worst case
 +            });
 +            
-+            console.log("Selected input selector:", inputSelector);
++            const numOtpInputs = await this.page.evaluate(arr => arr.length, otpInputHandles);
++            console.log("Number of real OTP inputs found:", numOtpInputs);
 +            
-+            await this.page.focus(inputSelector);
-+            for (const char of code) {
-+                await this.page.keyboard.press(char);
-+                await new Promise(r => setTimeout(r, 100)); // wait for auto-advance JS
++            if (numOtpInputs >= 6) {
++                // It's a 6-box OTP input
++                for (let i = 0; i < 6; i++) {
++                    const handle = await this.page.evaluateHandle((arr, idx) => arr[idx], otpInputHandles, i);
++                    await handle.focus();
++                    // Some 6-box inputs auto-advance, but typing individually ensures it works
++                    await handle.type(code[i] || '', { delay: 50 });
++                }
++            } else if (numOtpInputs > 0) {
++                // Single input box
++                const handle = await this.page.evaluateHandle(arr => arr[0], otpInputHandles);
++                await handle.focus();
++                await handle.evaluate(el => el.value = ''); // clear first
++                await handle.type(code, { delay: 100 });
++            } else {
++                console.log("CRITICAL ERROR: No OTP inputs found at all!");
 +            }
 +            
 +            // Wait 2 seconds to see if the page auto-submits (common in 6-box OTPs)
@@ -245,10 +241,18 @@ index 4ffa0b2..eda20f6 100644
 +            await new Promise(r => setTimeout(r, 2000));
 +            
 +            // If the OTP input is no longer visible, it auto-submitted!
-+            const isInputStillVisible = await this.page.evaluate((sel) => {
-+                const el = document.querySelector(sel);
-+                return el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-+            }, inputSelector);
++            const isInputStillVisible = await this.page.evaluate(() => {
++                const isVisible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
++                const inputs = Array.from(document.querySelectorAll('input'))
++                    .filter(isVisible)
++                    .filter(i => {
++                        const id = (i.id || '').toLowerCase();
++                        const name = (i.name || '').toLowerCase();
++                        const type = (i.type || '').toLowerCase();
++                        return !id.includes('usercode') && !id.includes('password') && !name.includes('password') && type !== 'password' && type !== 'hidden';
++                    });
++                return inputs.length > 0;
++            });
 +            
 +            if (isInputStillVisible) {
 +                console.log("No auto-submit detected. Looking for submit button.");

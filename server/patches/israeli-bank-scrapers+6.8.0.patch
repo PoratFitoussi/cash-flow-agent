@@ -116,21 +116,23 @@ index 4ffa0b2..e626a8e 100644
        submitButtonSelector: '.login-btn',
 -      postAction: async () => (0, _navigation.waitForRedirect)(this.page),
 +      postAction: async () => {
-+        await (0, _navigation.waitForRedirect)(this.page);
-+        
-+        // Wait 3 seconds to let SPA render
-+        await new Promise(r => setTimeout(r, 3000));
-+        
-+        try {
++        // Custom wait loop instead of waitForRedirect because OTP appears on the same URL
++        for (let i = 0; i < 30; i++) {
++          await new Promise(r => setTimeout(r, 1000));
++          const isDone = await this.page.evaluate(() => {
++            const url = window.location.href.toLowerCase();
++            return url.includes('homepage') || url.includes('errorcode');
++          });
++          if (isDone) return; // Break out, let the scraper's normal logic handle success/error
++          
++          // Check if OTP is required
 +          const isOtp = await this.page.evaluate(() => {
 +            const url = window.location.href.toLowerCase();
-+            // If we are on the homepage, it's a success, not OTP
-+            if (url.includes('homepage') || url.includes('ng-portals')) return false;
-+            // If we have a clear error code from the bank, let the scraper handle it
-+            if (url.includes('errorcode')) return false;
-+            
-+            // Otherwise, we are stuck on some intermediate page (likely OTP/SMS)
-+            return true;
++            if (url.includes('homepage') || url.includes('ng-portals/rb/he/homepage')) return false;
++            // Look for typical OTP indicators on the page
++            const text = document.body.innerText;
++            const hasOtpInput = !!document.querySelector('input[type="tel"]') || !!document.querySelector('input[type="password"]');
++            return hasOtpInput || text.includes('קוד') || text.includes('SMS');
 +          });
 +          
 +          if (isOtp) {
@@ -175,14 +177,16 @@ index 4ffa0b2..e626a8e 100644
 +                return 'button'; // fallback
 +            });
 +            
-+            await this.page.click(btnSelector);
++            await Promise.all([
++              this.page.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {}), // Ignore timeouts
++              this.page.click(btnSelector)
++            ]);
 +            
-+            // Wait 5 seconds for redirect after clicking submit
-+            await new Promise(r => setTimeout(r, 5000));
++            return; // We handled the OTP, now exit postAction
 +          }
-+        } catch (e) {
-+          console.error("OTP detection/injection failed:", e);
 +        }
++        
++        console.log("postAction loop finished, but no OTP or success detected. Letting scraper continue.");
 +      },
        possibleResults: getPossibleLoginResults(this.baseUrl)
      };

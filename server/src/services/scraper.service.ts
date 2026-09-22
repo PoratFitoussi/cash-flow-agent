@@ -3,33 +3,30 @@ import { EventEmitter } from "events";
 
 export const scraperEvents = new EventEmitter();
 
-// We will store pending OTP resolvers here
-const pendingOTPs = new Map<string, (code: string) => void>();
+// We will store pending scraper instances here
+const pendingScrapers = new Map<string, any>();
 
 export async function runScraper(options: ScraperOptions, credentials: ScraperCredentials) {
   const scraper = createScraper(options);
-  
-  // Custom hook into the scraper for OTP (assuming library supports an onOTP callback or similar, 
-  // or we mock the behavior for the human-in-the-loop requirement)
-  // Since israeli-bank-scrapers doesn't have a native pause-for-OTP, 
-  // we would typically use a customized page interaction or an upcoming PR for that library.
-  // For the sake of this architecture, we emit the event and await the promise.
-  
   const sessionId = Math.random().toString(36).substring(7);
 
+  // Listen for the custom OTP event injected via our patch-package modifications
+  (scraper as any).on('onOtpRequired', (data: any) => {
+    console.log(`[scraper.service] Received onOtpRequired from scraper for session ${sessionId}`);
+    
+    // Store the actual scraper instance so we can call submitOtp on it later
+    pendingScrapers.set(sessionId, scraper);
+    
+    // Alert the frontend
+    scraperEvents.emit('AWAITING_OTP', { sessionId, companyId: options.companyId });
+  });
+
   scraper.onProgress((companyId, msg) => {
-    if (msg.type === 'OTP_REQUIRED') {
+    // If we receive a generic error that looks like OTP failure, we can handle it,
+    // but the patched logic should handle everything internally.
+    if ((msg.type as any) === 'OTP_REQUIRED') {
+      // Fallback if other scrapers use this natively
       scraperEvents.emit('AWAITING_OTP', { sessionId, companyId });
-      
-      // Pause execution for up to 180s
-      return new Promise<string>((resolve, reject) => {
-        pendingOTPs.set(sessionId, resolve);
-        
-        setTimeout(() => {
-          pendingOTPs.delete(sessionId);
-          reject(new Error("OTP Timeout"));
-        }, 180000);
-      });
     }
   });
 
@@ -39,14 +36,17 @@ export async function runScraper(options: ScraperOptions, credentials: ScraperCr
   } catch (error) {
     console.error("Scraping failed:", error);
     throw error;
+  } finally {
+    // Cleanup
+    pendingScrapers.delete(sessionId);
   }
 }
 
 export function submitOTP(sessionId: string, code: string) {
-  const resolver = pendingOTPs.get(sessionId);
-  if (resolver) {
-    resolver(code);
-    pendingOTPs.delete(sessionId);
+  const scraper = pendingScrapers.get(sessionId);
+  if (scraper && typeof scraper.submitOtp === 'function') {
+    scraper.submitOtp(code);
+    pendingScrapers.delete(sessionId);
     return true;
   }
   return false;

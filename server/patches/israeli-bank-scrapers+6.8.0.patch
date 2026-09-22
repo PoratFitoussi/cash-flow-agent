@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..eaa5445 100644
+index 4ffa0b2..c0b0fb9 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -110,3 +110,83 @@ index 4ffa0b2..eaa5445 100644
    const finalResult = additionalTransactionInformation && txnsResult?.transactions.length ? await getExtraScrap(txnsResult, baseUrl, page, accountNumber) : txnsResult;
    return convertTransactions(finalResult?.transactions ?? [], options);
  }
+@@ -186,10 +284,78 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
+       fields: createLoginFields(credentials),
+       submitButtonSelector: '.login-btn',
+-      postAction: async () => (0, _navigation.waitForRedirect)(this.page),
++      postAction: async () => {
++        await (0, _navigation.waitForRedirect)(this.page);
++        
++        // Custom OTP Injection Logic
++        try {
++          const isOtp = await this.page.evaluate(() => {
++            const url = window.location.href.toLowerCase();
++            const body = document.body.innerHTML;
++            // Common indicators of an OTP/SMS screen in Israeli banks
++            return url.includes('otp') || url.includes('auth') || url.includes('verification') || 
++                   !!document.querySelector('input[type="tel"]') || 
++                   body.includes('SMS') || body.includes('קוד') || body.includes('אימות');
++          });
++          
++          if (isOtp) {
++            console.log("OTP Screen Detected! Pausing execution.");
++            this.emit('onOtpRequired', { message: 'OTP Required' });
++            
++            this._otpPromise = new Promise((resolve, reject) => {
++              this._resolveOtp = resolve;
++              
++              this._otpTimeout = setTimeout(() => {
++                reject(new Error("OTP Timeout: No code provided within 3 minutes"));
++              }, 3 * 60 * 1000);
++            });
++            
++            const code = await this._otpPromise;
++            clearTimeout(this._otpTimeout);
++            
++            // Assume there's a tel input or a specific id for the code
++            const inputSelector = await this.page.evaluate(() => {
++                const inputs = Array.from(document.querySelectorAll('input'));
++                const telInput = inputs.find(i => i.type === 'tel' || i.name.toLowerCase().includes('code') || i.id.toLowerCase().includes('code'));
++                if (telInput) {
++                    if (!telInput.id) telInput.id = 'injected-otp-input';
++                    return '#' + telInput.id;
++                }
++                return 'input[type="text"]'; // fallback
++            });
++            
++            await this.page.type(inputSelector, code);
++            
++            const btnSelector = await this.page.evaluate(() => {
++                const buttons = Array.from(document.querySelectorAll('button'));
++                // Find primary submit button
++                const submitBtn = buttons.find(b => b.type === 'submit' || (b.innerText && (b.innerText.includes('אישור') || b.innerText.includes('המשך'))));
++                if (submitBtn) {
++                    if (!submitBtn.id) submitBtn.id = 'injected-otp-submit';
++                    return '#' + submitBtn.id;
++                }
++                return 'button'; // fallback
++            });
++            
++            await this.page.click(btnSelector);
++            await (0, _navigation.waitForRedirect)(this.page);
++          }
++        } catch (e) {
++          console.error("OTP detection/injection failed:", e);
++        }
++      },
+       possibleResults: getPossibleLoginResults(this.baseUrl)
+     };
+   }
++  
++  submitOtp(code) {
++    if (this._resolveOtp) {
++      this._resolveOtp(code);
++    } else {
++      console.warn("submitOtp called but no OTP promise is pending.");
++    }
++  }
++
+   async fetchData() {
+     return fetchAccountData(this.page, this.baseUrl, this.options);
+   }

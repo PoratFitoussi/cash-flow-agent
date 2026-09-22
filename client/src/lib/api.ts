@@ -20,7 +20,11 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'API Request Failed');
+    console.error("Backend Error Details:", error);
+    
+    // Create a more descriptive error message combining the status and backend message
+    const errorMsg = error.error || error.message || error.details?.errorMessage || `HTTP ${response.status} - API Request Failed`;
+    throw new Error(errorMsg);
   }
 
   return response.json();

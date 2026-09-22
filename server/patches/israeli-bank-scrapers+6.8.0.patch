@@ -1,5 +1,5 @@
 diff --git a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
-index 4ffa0b2..bcc88db 100644
+index 4ffa0b2..0a73c63 100644
 --- a/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 +++ b/node_modules/israeli-bank-scrapers/lib/scrapers/hapoalim.js
 @@ -115,9 +115,107 @@ async function getExtraScrap(txnsResult, baseUrl, page, accountNumber) {
@@ -138,7 +138,7 @@ index 4ffa0b2..bcc88db 100644
    urls[_baseScraperWithBrowser.LoginResults.ChangePassword] = [`${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`, /\/ABOUTTOEXPIRE\/START/i];
    return urls;
  }
-@@ -186,10 +301,95 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
+@@ -186,10 +301,100 @@ class HapoalimScraper extends _baseScraperWithBrowser.BaseScraperWithBrowser {
        loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
        fields: createLoginFields(credentials),
        submitButtonSelector: '.login-btn',
@@ -193,11 +193,16 @@ index 4ffa0b2..bcc88db 100644
 +                return 'input'; // fallback
 +            });
 +            
-+            await this.page.type(inputSelector, code);
++            await this.page.type(inputSelector, code, { delay: 100 });
 +            
 +            const btnSelector = await this.page.evaluate(() => {
 +                const buttons = Array.from(document.querySelectorAll('button'));
-+                const submitBtn = buttons.find(b => b.type === 'submit' || (b.innerText && (b.innerText.includes('אישור') || b.innerText.includes('המשך') || b.innerText.includes('שלח'))));
++                // Exclude buttons that have "שוב" (again) or "חדש" (new) to avoid "Resend code"
++                const submitBtn = buttons.find(b => {
++                    const text = b.innerText || '';
++                    if (text.includes('שוב') || text.includes('חדש')) return false;
++                    return b.type === 'submit' || text.includes('אישור') || text.includes('המשך') || text.includes('כניסה');
++                });
 +                if (submitBtn) {
 +                    if (!submitBtn.id) submitBtn.id = 'injected-otp-submit';
 +                    return '#' + submitBtn.id;

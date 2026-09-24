@@ -41,6 +41,7 @@ export const merchantCategoryMappings = pgTable("merchant_category_mappings", {
   renameTo: varchar("rename_to", { length: 255 }), // new: clean name
   ownerName: varchar("owner_name", { length: 255 }), // new: assign owner
   confidenceScore: integer("confidence_score").notNull(),
+  expenseType: varchar("expense_type", { length: 20 }).default('WANT').notNull(), // 'NEED' or 'WANT'
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -75,7 +76,7 @@ export const transactions = pgTable('transactions', {
   accountId: text('account_id'), // Restored from original
   receiptImageUrl: text('receipt_image_url'),
   cardOwner: varchar('card_owner', { length: 255 }),
-  isFixed: boolean('is_fixed').default(false).notNull(),
+  expenseType: varchar("expense_type", { length: 20 }).default('WANT').notNull(), // 'NEED' or 'WANT'
   notes: text('notes'),
   status: varchar('status', { length: 50 }).default('PENDING').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

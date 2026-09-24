@@ -30,6 +30,7 @@ Used daily or weekly to quickly verify unhandled credit card charges, approve AI
 ## Brand Commitments
 - Tone: Clean, premium, modern, and highly legible. 
 - Fast and responsive, zero lag on mobile.
+- Visual Identity: Standard Dashboard Canon (clean, premium cards, standard finance app layout). Executed at full fidelity.
 
 ## Evidence on Hand
 - Working dashboard UI in `client/src/routes/index.tsx`.

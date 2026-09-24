@@ -7,7 +7,13 @@ RUN npm install
 
 COPY . .
 
+# Build the production bundle
+RUN npm run build
+
+# Install a simple static server
+RUN npm install -g serve
+
 EXPOSE 5173
 
-# Expose host to 0.0.0.0 so it can be mapped to local machine
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Serve the production build folder on port 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]

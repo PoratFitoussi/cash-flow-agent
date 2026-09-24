@@ -21,8 +21,6 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./server:/usr/src/app
-      - /usr/src/app/node_modules
       - ./server/browser_data:/usr/src/app/browser_data
     environment:
       - DATABASE_URL=postgres://admin:password@db:5432/cashflow
@@ -38,9 +36,6 @@ services:
     container_name: cash-flow-frontend
     ports:
       - "5173-5174:5173-5174"
-    volumes:
-      - ./client:/app
-      - /app/node_modules
     depends_on:
       - api
 

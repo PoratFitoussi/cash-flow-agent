@@ -1,0 +1,72 @@
+{
+  "title": "Choose the visual world for Cash Flow Agent",
+  "question": "The roll assigned Kinetic Sculpture. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Kinetic Sculpture",
+      "kicker": "THE ROLL",
+      "lineage": "automata tensegrity breathing column",
+      "thesis": "A structural network where every expense is a force that pulls on the budget tension.",
+      "palette": ["#111111", "#d4d4d4", "#e11d48"],
+      "materials": ["matte carbon-black", "red tension cord"],
+      "viewport": "Engineering monospaced labels tracing loads to counterforces on a concrete ground.",
+      "risk": "Can feel too abstract and disconnected from familiar financial metaphors.",
+      "wireframe": {"cols":12,"rows":10,"regions":[{"label":"tension network","x":0,"y":0,"w":12,"h":10,"accent":true}]},
+      "comp": ".impeccable/mocks/decision/assigned.webp",
+      "hero": "https://impeccable.style/worlds/cards/kinetic-sculpture-automata-tensegrity-breathing-column-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/kinetic-sculpture-automata-tensegrity-breathing-column.webp"
+    },
+    {
+      "id": "challenger-variable-font",
+      "label": "Variable Font Specimen",
+      "verdict": "competitive",
+      "lineage": "interactive type specimen",
+      "thesis": "Information density driven by pure typography and scale contrast.",
+      "palette": ["#fafafa", "#0a0a0a", "#2563eb"],
+      "materials": ["flat paper", "ink black"],
+      "viewport": "Strict baseline grids where large type morphs to indicate available cash flow.",
+      "case": "Extremely clean and focused, losing only slightly on immediate emotional impact.",
+      "risk": "Lacks the warmth some users expect from personal finance tools.",
+      "wireframe": {"cols":12,"rows":10,"regions":[{"label":"display type","x":0,"y":0,"w":12,"h":4,"accent":true}, {"label":"data grid","x":0,"y":4,"w":12,"h":6}]},
+      "comp": ".impeccable/mocks/decision/challenger-variable-font.webp",
+      "hero": "https://impeccable.style/worlds/cards/variable-font-specimen-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/variable-font-specimen.webp"
+    },
+    {
+      "id": "challenger-seven-segment",
+      "label": "Seven Segment Clock",
+      "verdict": "competitive",
+      "lineage": "gas-station price totems and scoreboards",
+      "thesis": "Financial totals as unmissable, glowing scoreboard digits.",
+      "palette": ["#0a0a0a", "#ef4444", "#22c55e", "#292524"],
+      "materials": ["lit LED segments", "matte near-black ground"],
+      "viewport": "Rigid segment mask cells flipping instantly as expenses are categorized.",
+      "case": "Highly visible and satisfying interactions; ties well into immediate feedback loops.",
+      "risk": "Can feel abrasive or overly urgent for a household budgeting tool.",
+      "wireframe": {"cols":12,"rows":10,"regions":[{"label":"glowing digits","x":2,"y":2,"w":8,"h":6,"accent":true}]},
+      "comp": ".impeccable/mocks/decision/challenger-seven-segment.webp",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-seven-segment-alarm-clock-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-seven-segment-alarm-clock.webp"
+    }
+  ],
+  "reroll": {
+    "registers": ["safer", "bolder"]
+  },
+  "buildPath": {
+    "value": "code",
+    "toggle": false
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "The standard dashboard",
+    "thesis": "What every finance app ships, executed flawlessly.",
+    "palette": ["#f8fafc", "#0f172a", "#0ea5e9"],
+    "materials": ["clean cards", "soft shadows"],
+    "viewport": "Standard top metrics row over a transaction list and pie chart.",
+    "risk": "Indistinguishable from the competition by design.",
+    "wireframe": {"cols":12,"rows":10,"regions":[{"label":"header","x":0,"y":0,"w":12,"h":2},{"label":"cards","x":0,"y":2,"w":12,"h":3,"accent":true},{"label":"list","x":0,"y":5,"w":12,"h":5}]},
+    "comp": ".impeccable/mocks/decision/canon.webp"
+  },
+  "steer": true
+}

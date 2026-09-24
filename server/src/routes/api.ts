@@ -7,6 +7,8 @@ import { scraperEvents, submitOTP, runScraper } from '../services/scraper.servic
 import { processPendingTransactions } from '../services/aiCategorization.service';
 import { CompanyTypes } from 'israeli-bank-scrapers';
 
+import { performSync } from '../services/sync.service';
+
 export const apiRouter = express.Router();
 
 // Middleware: all API routes require authentication
@@ -15,124 +17,8 @@ apiRouter.use(requireAuth);
 apiRouter.post('/sync', async (req: any, res) => {
   const userId = req.user.id;
   try {
-    const options: any = {
-      companyId: (process.env.SCRAPER_COMPANY_ID as CompanyTypes) || 'hapoalim',
-      startDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // last 120 days (approx 4 months)
-      combineInstallments: false,
-      showBrowser: false, // Set to true if debugging locally
-      additionalTransactionInformation: true, // MUST be true to get real names instead of placeholders
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    };
-    
-    const credentials = {
-      id: process.env.SCRAPER_USERNAME || '',
-      userCode: process.env.SCRAPER_USERNAME || '', // Some banks use userCode
-      password: process.env.SCRAPER_PASSWORD || '',
-    };
-
-    const scrapeResult = await runScraper(options, credentials as any);
-    if (!scrapeResult.success) {
-       return res.status(500).json({ error: 'Scrape failed or incomplete', details: scrapeResult });
-    }
-
-    let insertedCount = 0;
-    const existingMappings = await db.select().from(cardOwners);
-    const memoryRules = await db.select().from(merchantCategoryMappings);
-    const defaultSpendingsCategory = await db.query.categories.findFirst({ where: eq(categories.name, 'בזבוזים') });
-    const basisCategory = await db.query.categories.findFirst({ where: eq(categories.name, 'בסיס') });
-    
-    for (const account of scrapeResult.accounts || []) {
-       const accountId = account.accountNumber;
-       const mapping = existingMappings.find(m => m.accountId === accountId);
-       const defaultCardOwner = mapping ? mapping.ownerName : null;
-       
-       for (const txn of account.txns) {
-          // If the bank gives us a generic description (like 'דירקט'), the actual store is often in the memo.
-          let fullMerchant = txn.memo ? `${txn.description} - ${txn.memo}` : txn.description;
-          const originalMerchantString = fullMerchant; // Save the raw bank string before memory rules mutate it
-          
-          // Completely ignore placeholder "Direct" (דירקט) transactions
-          if (fullMerchant.includes('דירקט')) {
-            continue;
-          }
-
-          // Check if the 4-digit card suffix exists in the transaction text
-          let matchedCardOwner = defaultCardOwner;
-          if (!matchedCardOwner) {
-            const fallbackMapping = existingMappings.find(m => fullMerchant.includes(m.accountId));
-            if (fallbackMapping) {
-              matchedCardOwner = fallbackMapping.ownerName;
-            }
-          }
-          
-          let assignedCategoryId = null;
-
-          // Apply AI Memory Rules
-          for (const rule of memoryRules) {
-             if (fullMerchant.toLowerCase().includes(rule.merchantName.toLowerCase())) {
-                assignedCategoryId = rule.categoryId;
-                if (rule.renameTo) fullMerchant = rule.renameTo;
-                if (rule.ownerName) matchedCardOwner = rule.ownerName;
-                break;
-             }
-          }
-          
-          // Deduplication check: same date, amount. 
-          // We fetch all transactions for this date and amount and fuzzy match the merchant in JS
-          // to handle cases where the user renamed the merchant, or the bank appended a memo.
-          const amountStr = txn.chargedAmount.toString();
-          const existingForDateAndAmount = await db.select().from(transactions).where(
-             and(
-               eq(transactions.userId, userId),
-               eq(transactions.transactionDate, new Date(txn.date)),
-               eq(transactions.amount, amountStr)
-             )
-          );
-          
-          // Helper to normalize merchant names for comparison (remove punctuation, spaces, exact match)
-          const normalize = (s: string) => s.replace(/[^\w\sא-ת]/gi, '').replace(/\s+/g, '').toLowerCase();
-          const normFullOriginal = normalize(originalMerchantString);
-          const normDesc = normalize(txn.description);
-          
-          const isDuplicate = existingForDateAndAmount.some(existingTxn => {
-            const normExisting = normalize(existingTxn.originalMerchant || existingTxn.merchant);
-            // If the existing original name is contained in the new original name, or vice versa, it's a duplicate
-            return normFullOriginal.includes(normExisting) || normExisting.includes(normFullOriginal) ||
-                   normDesc.includes(normExisting) || normExisting.includes(normDesc);
-          });
-          
-          if (!isDuplicate) {
-             const type = txn.chargedAmount > 0 ? 'INCOME' : 'EXPENSE';
-             if (!assignedCategoryId && type === 'EXPENSE' && defaultSpendingsCategory) {
-               assignedCategoryId = defaultSpendingsCategory.id;
-             }
-             
-             const isFixedTransaction = assignedCategoryId === basisCategory?.id;
-             
-             await db.insert(transactions).values({
-               userId,
-               transactionDate: new Date(txn.date),
-               amount: amountStr,
-               merchant: fullMerchant,
-               originalMerchant: originalMerchantString,
-               type,
-               source: 'BANK_SYNC',
-               paymentMethod: 'CREDIT', 
-               accountId,
-               cardOwner: matchedCardOwner,
-               categoryId: assignedCategoryId,
-               isTemplate: isFixedTransaction,
-             });
-             insertedCount++;
-          }
-       }
-    }
-    
-    // Auto-categorize any pending transactions immediately after sync
-    await processPendingTransactions();
-
-    res.json({ success: true, insertedCount });
+    const result = await performSync({ userId, isBackground: false });
+    res.json({ success: true, insertedCount: result.insertedCount });
   } catch (error: any) {
     console.error("Sync error:", error);
     res.status(500).json({ error: error.message || error.toString(), stack: error.stack });
@@ -169,8 +55,20 @@ apiRouter.post('/otp/submit', (req, res) => {
 
 apiRouter.get('/transactions', async (req, res) => {
   try {
-    const { owner, isFixed, status, search, categoryId, type } = req.query;
+    const { owner, isFixed, status, search, categoryId, type, period } = req.query;
     const conditions = [];
+
+    if (period && period !== 'All') {
+      const [yearStr, monthStr] = (period as string).split('-');
+      if (yearStr && monthStr) {
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
+        const startOfMonth = new Date(year, month, 1);
+        const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        conditions.push(gte(transactions.transactionDate, startOfMonth));
+        conditions.push(lte(transactions.transactionDate, endOfMonth));
+      }
+    }
 
     if (type && type !== 'All') {
       conditions.push(eq(transactions.type, type as string));
@@ -446,5 +344,40 @@ apiRouter.patch('/transactions/:id/owner', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update transaction owner' });
+  }
+});
+
+apiRouter.get('/stats/runway', async (req: any, res) => {
+  try {
+    const defaultUserId = "1";
+    // 90 days ago
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const txns = await db.select().from(transactions).where(
+      and(
+        eq(transactions.userId, defaultUserId),
+        sql`${transactions.transactionDate} >= ${ninetyDaysAgo.toISOString()}`
+      )
+    );
+    
+    // Filter out investments for true burn rate
+    const investmentsCat = await db.query.categories.findFirst({ where: eq(categories.name, 'השקעות') });
+    const investId = investmentsCat ? investmentsCat.id : null;
+    
+    const expenses = txns.filter(t => t.type === 'EXPENSE' && t.categoryId !== investId);
+    const totalBurn = expenses.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+    
+    const dailyBurnRate = totalBurn / 90;
+    
+    // Mock current balance since we don't store balance in the DB yet
+    // Assuming ₪20,000 cash on hand for the prototype
+    const currentBalance = 20000; 
+    
+    const runwayDays = dailyBurnRate > 0 ? Math.floor(currentBalance / dailyBurnRate) : 999;
+    
+    res.json({ currentBalance, dailyBurnRate, runwayDays });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });

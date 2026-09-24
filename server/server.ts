@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { apiRouter } from './src/routes/api';
-// The auth route is already used inside apiRouter
+import { initCronJobs } from './src/services/cron.service';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -17,4 +17,7 @@ app.use('/api', apiRouter);
 // Start the server
 app.listen(port, () => {
     console.log(`API Server running at http://localhost:${port}`);
+    
+    // Initialize background automated tasks
+    initCronJobs();
 });

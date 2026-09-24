@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
-export async function categorizeTransactionsBatch(merchants: string[]): Promise<Record<string, { categoryId: string, confidenceScore: number }> | null> {
+export async function categorizeTransactionsBatch(merchants: string[]): Promise<Record<string, { categoryId: string, confidenceScore: number, expenseType: string }> | null> {
   const allCategories = await db.select().from(categories);
   if (allCategories.length === 0) return null;
 
@@ -23,9 +23,10 @@ ${categoryListStr}
 Merchants to categorize:
 [${merchantsList}]
 
-Return a strict JSON payload. The root object must be a map where the key is the exact merchant name, and the value is an object containing exactly two fields:
+Return a strict JSON payload. The root object must be a map where the key is the exact merchant name, and the value is an object containing exactly three fields:
 - "categoryId": The ID of the best matching category from the list above.
 - "confidenceScore": An integer between 0 and 100 representing your confidence.
+- "expenseType": A string, either "NEED" or "WANT". Return "NEED" for required survival expenses (e.g., rent, utilities, supermarket/groceries, health, insurance, basic fuel). Return "WANT" for discretionary spending (e.g., eating out, restaurants, shopping, subscriptions, entertainment).
 `;
 
   try {
@@ -57,7 +58,7 @@ export async function processPendingTransactions() {
   const uniqueMerchants = [...new Set(pendingTxns.map(t => t.merchant).filter(Boolean))] as string[];
   console.log(`Found ${uniqueMerchants.length} unique merchants to categorize.`);
 
-  const categoryMap = new Map<string, string>();
+  const categoryMap = new Map<string, { categoryId: string, expenseType: string }>();
   
   // First, check DB cache for all unique merchants
   const cachedMappings = await db.select().from(merchantCategoryMappings);
@@ -66,7 +67,7 @@ export async function processPendingTransactions() {
   for (const merchant of uniqueMerchants) {
     const cache = cachedMappings.find(m => m.merchantName === merchant);
     if (cache) {
-      categoryMap.set(merchant, cache.categoryId);
+      categoryMap.set(merchant, { categoryId: cache.categoryId, expenseType: cache.expenseType });
     } else {
       uncachedMerchants.push(merchant);
     }
@@ -81,12 +82,13 @@ export async function processPendingTransactions() {
     if (llmResults) {
       for (const [merchant, data] of Object.entries(llmResults)) {
         if (data.categoryId && data.confidenceScore >= 85) {
-          categoryMap.set(merchant, data.categoryId);
+          categoryMap.set(merchant, { categoryId: data.categoryId, expenseType: data.expenseType || 'WANT' });
           // Save to cache
           await db.insert(merchantCategoryMappings).values({
             merchantName: merchant,
             categoryId: data.categoryId,
-            confidenceScore: data.confidenceScore
+            confidenceScore: data.confidenceScore,
+            expenseType: data.expenseType || 'WANT'
           }).catch(e => console.error("Cache insert error", e));
         }
       }
@@ -97,10 +99,10 @@ export async function processPendingTransactions() {
   for (const txn of pendingTxns) {
     if (!txn.merchant) continue;
     
-    const categoryId = categoryMap.get(txn.merchant);
-    if (categoryId) {
+    const mapped = categoryMap.get(txn.merchant);
+    if (mapped) {
       await db.update(transactions)
-        .set({ categoryId, status: 'CATEGORIZED' })
+        .set({ categoryId: mapped.categoryId, expenseType: mapped.expenseType, status: 'CATEGORIZED' })
         .where(eq(transactions.id, txn.id));
       processedCount++;
     }

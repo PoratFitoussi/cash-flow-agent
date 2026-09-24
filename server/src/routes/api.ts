@@ -381,3 +381,25 @@ apiRouter.get('/stats/runway', async (req: any, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+apiRouter.get('/transactions/cleanup-duplicates', async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH duplicates AS (
+        SELECT id,
+               ROW_NUMBER() OVER(
+                 PARTITION BY amount, merchant 
+                 ORDER BY created_at DESC
+               ) as rn
+        FROM transactions
+      )
+      DELETE FROM transactions
+      WHERE id IN (
+        SELECT id FROM duplicates WHERE rn > 1
+      );
+    `);
+    res.json({ success: true, message: "Duplicates cleaned up successfully." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

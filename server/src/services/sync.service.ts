@@ -1,7 +1,7 @@
 import path from 'path';
 import { db } from '../db';
 import { transactions, categories, cardOwners, merchantCategoryMappings } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { runScraper, scraperEvents } from './scraper.service';
 import { processPendingTransactions } from './aiCategorization.service';
 import { CompanyTypes } from 'israeli-bank-scrapers';
@@ -97,11 +97,19 @@ export async function performSync({ userId, isBackground = false }: SyncOptions)
           }
           
           const amountStr = txn.chargedAmount.toString();
+          // Check within a 3-day window to avoid timezone/bank-date shifts
+          const d = new Date(txn.date);
+          const startDate = new Date(d);
+          startDate.setDate(startDate.getDate() - 3);
+          const endDate = new Date(d);
+          endDate.setDate(endDate.getDate() + 3);
+
           const existingForDateAndAmount = await db.select().from(transactions).where(
              and(
                eq(transactions.userId, userId),
-               eq(transactions.transactionDate, new Date(txn.date)),
-               eq(transactions.amount, amountStr)
+               eq(transactions.amount, amountStr),
+               sql`${transactions.transactionDate} >= ${startDate.toISOString()}`,
+               sql`${transactions.transactionDate} <= ${endDate.toISOString()}`
              )
           );
           

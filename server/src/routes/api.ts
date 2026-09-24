@@ -388,7 +388,7 @@ apiRouter.get('/transactions/cleanup-duplicates', async (req, res) => {
       WITH duplicates AS (
         SELECT id,
                ROW_NUMBER() OVER(
-                 PARTITION BY amount, merchant 
+                 PARTITION BY amount, CAST(transaction_date AS DATE)
                  ORDER BY created_at DESC
                ) as rn
         FROM transactions
@@ -398,7 +398,7 @@ apiRouter.get('/transactions/cleanup-duplicates', async (req, res) => {
         SELECT id FROM duplicates WHERE rn > 1
       );
     `);
-    res.json({ success: true, message: "Duplicates cleaned up successfully." });
+    res.json({ success: true, message: "Aggressive duplicates cleaned up successfully." });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

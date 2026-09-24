@@ -1,34 +1,61 @@
 import { createRootRoute, Outlet, Link } from '@tanstack/react-router';
-import { Home, Banknote, Settings, PieChart } from 'lucide-react';
-import { OTPModal } from '@/components/OTPModal';
+import { Activity, LayoutDashboard, Settings, PieChart } from 'lucide-react';
 
 export const Route = createRootRoute({
-  component: () => (
-    <div className="w-full min-h-screen bg-slate-950 text-slate-50 flex flex-col font-sans">
-      <OTPModal />
-      <main className="flex-1 overflow-y-auto p-4 pb-24">
+  component: AppShell,
+});
+
+function AppShell() {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16 md:pb-0">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2 font-bold tracking-tight text-lg">
+              <Activity className="h-5 w-5 text-primary" />
+              <span>CashFlow</span>
+            </Link>
+            
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+              <Link to="/" className="transition-colors hover:text-foreground/80 text-foreground/60 [&.active]:text-foreground">
+                Dashboard
+              </Link>
+              <Link to="/transactions" className="transition-colors hover:text-foreground/80 text-foreground/60 [&.active]:text-foreground">
+                Transactions
+              </Link>
+              <Link to="/budget" className="transition-colors hover:text-foreground/80 text-foreground/60 [&.active]:text-foreground">
+                Budget
+              </Link>
+            </nav>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Link to="/settings" className="text-muted-foreground hover:text-foreground transition-colors">
+              <Settings className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
         <Outlet />
       </main>
-      
-      {/* Mobile-first bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md border-t border-slate-800 p-4 pb-6 flex justify-around items-center z-50" dir="rtl">
-        <Link to="/" className="[&.active]:text-sky-400 text-slate-400 flex flex-col items-center gap-1 transition-colors [&.active_svg]:fill-current">
-          <Home className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">לוח בקרה</span>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 w-full border-t bg-background flex justify-around items-center h-16 z-50 pb-[env(safe-area-inset-bottom)]">
+        <Link to="/" className="flex flex-col items-center gap-1 text-muted-foreground [&.active]:text-primary">
+          <LayoutDashboard className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Home</span>
         </Link>
-        <Link to="/cash" className="[&.active]:text-sky-400 text-slate-400 flex flex-col items-center gap-1 transition-colors [&.active_svg]:fill-current">
-          <Banknote className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">מזומן</span>
+        <Link to="/transactions" className="flex flex-col items-center gap-1 text-muted-foreground [&.active]:text-primary">
+          <Activity className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Txns</span>
         </Link>
-        <Link to="/categories" className="[&.active]:text-sky-400 text-slate-400 flex flex-col items-center gap-1 transition-colors [&.active_svg]:fill-current">
-          <PieChart className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">תקציבים</span>
-        </Link>
-        <Link to="/settings" className="[&.active]:text-sky-400 text-slate-400 flex flex-col items-center gap-1 transition-colors [&.active_svg]:fill-current">
-          <Settings className="w-6 h-6" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">הגדרות</span>
+        <Link to="/budget" className="flex flex-col items-center gap-1 text-muted-foreground [&.active]:text-primary">
+          <PieChart className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Budget</span>
         </Link>
       </nav>
     </div>
-  ),
-});
+  );
+}

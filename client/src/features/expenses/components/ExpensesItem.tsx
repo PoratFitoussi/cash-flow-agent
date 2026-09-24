@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Coffee, Car, Home } from 'lucide-react';
+import { ShoppingCart, Car, Home, Utensils, HeartPulse, HelpCircle } from 'lucide-react';
 
 export type Expense = {
   expense_id: string;
@@ -20,14 +20,13 @@ interface ExpensesItemProps {
 const ExpensesItem: React.FC<ExpensesItemProps> = ({ expense }) => {
   // Helper to pick an icon based on category
   const getCategoryIcon = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'food': 
-      case 'groceries': return <Coffee size={20} />;
-      case 'transportation': 
-      case 'gas': return <Car size={20} />;
-      case 'shopping': return <ShoppingCart size={20} />;
-      default: return <Home size={20} />;
-    }
+    const c = category.toLowerCase();
+    if (c === 'supermarket' || c.includes('grocer') || c.includes('market') || c.includes('food')) return <ShoppingCart size={20} />;
+    if (c === 'car' || c.includes('vehicle') || c.includes('gas') || c.includes('transport')) return <Car size={20} />;
+    if (c === 'housing' || c.includes('hous') || c.includes('rent') || c.includes('mortgage')) return <Home size={20} />;
+    if (c === 'eating out' || c.includes('eat') || c.includes('din') || c.includes('restaurant')) return <Utensils size={20} />;
+    if (c === 'health' || c.includes('medic')) return <HeartPulse size={20} />;
+    return <HelpCircle size={20} />;
   };
 
   return (

@@ -170,3 +170,7 @@ export const couponsRelations = relations(coupons, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const dummyTable = pgTable('dummy_table', {
+  id: uuid('id').primaryKey().defaultRandom(),
+});

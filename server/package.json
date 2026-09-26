@@ -8,7 +8,7 @@
     "start:dev": "tsx watch server.ts",
     "scrape": "tsx index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:api": "npx drizzle-kit push --force && tsx server.ts",
+    "start:api": "tsx server.ts",
     "postinstall": "patch-package"
   },
   "keywords": [],

@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useTransactions, useSync, useUpdateTransaction } from '@/features/transactions/useTransactions';
+import { useTransactions, useSync, useUpdateTransaction, useDeleteTransaction } from '@/features/transactions/useTransactions';
 import { useCategories } from '@/features/categories/useCategories';
 import { formatDate } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowDownIcon, ArrowUpIcon, RefreshCw, AlertCircle, ShoppingCart, Car, Home, Utensils, HeartPulse, Zap, Bus, Briefcase, HelpCircle } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, RefreshCw, AlertCircle, ShoppingCart, Car, Home, Utensils, HeartPulse, Zap, Bus, Briefcase, HelpCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/')({
@@ -38,6 +38,7 @@ function Dashboard() {
   const { data: categories = [] } = useCategories();
   const syncMutation = useSync();
   const updateTxMutation = useUpdateTransaction();
+  const deleteTxMutation = useDeleteTransaction();
 
   const incomes = transactions.filter((t: any) => t.type === 'INCOME' && t.paymentMethod !== 'CASH');
   const expenses = transactions.filter((t: any) => t.type === 'EXPENSE' || t.paymentMethod === 'CASH');
@@ -140,9 +141,14 @@ function Dashboard() {
                       <span className="font-medium text-sm line-clamp-1" title={t.merchant}>{t.merchant}</span>
                       <span className="text-xs text-muted-foreground">{formatDate(t.transactionDate)}</span>
                     </div>
-                    <span className={`font-semibold whitespace-nowrap ${t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? 'text-emerald-500' : ''}`}>
-                      {t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? '+' : '-'}₪{Math.abs(Number(t.amount)).toLocaleString()}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className={`font-semibold whitespace-nowrap ${t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? 'text-emerald-500' : ''}`}>
+                        {t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? '+' : '-'}₪{Math.abs(Number(t.amount)).toLocaleString()}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive mt-1" onClick={() => deleteTxMutation.mutate(t.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <Badge variant={t.categoryId ? "secondary" : "outline"} className={`text-[10px] px-1.5 py-0 flex items-center ${!t.categoryId ? "text-amber-500 border-amber-500/50" : ""}`}>
@@ -182,6 +188,7 @@ function Dashboard() {
                     <TableHead>Category</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -221,6 +228,11 @@ function Dashboard() {
                       </TableCell>
                       <TableCell className={`text-right font-medium whitespace-nowrap ${t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? 'text-emerald-500' : ''}`}>
                         {t.type === 'INCOME' && t.paymentMethod !== 'CASH' ? '+' : '-'}₪{Math.abs(Number(t.amount)).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteTxMutation.mutate(t.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -421,3 +421,19 @@ apiRouter.get('/transactions/fix-salaries', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Endpoint to delete a specific transaction
+apiRouter.delete('/transactions/:id', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await db.delete(transactions).where(
+      and(
+        eq(transactions.id, req.params.id),
+        eq(transactions.userId, userId)
+      )
+    );
+    res.json({ success: true, message: "Transaction deleted successfully." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

@@ -1,7 +1,7 @@
 import express from 'express';
 import { db } from '../db';
 import { transactions, categories, budgets, cardOwners, merchantCategoryMappings } from '../db/schema';
-import { eq, isNull, desc, and, or, ilike, gte, lte } from 'drizzle-orm';
+import { eq, isNull, desc, and, or, ilike, gte, lte, ne } from 'drizzle-orm';
 import { requireAuth } from './auth';
 import { scraperEvents, submitOTP, runScraper } from '../services/scraper.service';
 import { processPendingTransactions } from '../services/aiCategorization.service';
@@ -56,7 +56,7 @@ apiRouter.post('/otp/submit', (req, res) => {
 apiRouter.get('/transactions', async (req, res) => {
   try {
     const { owner, isFixed, status, search, categoryId, type, period } = req.query;
-    const conditions = [];
+    const conditions = [ne(transactions.status, 'DELETED')];
 
     if (period && period !== 'All') {
       const [yearStr, monthStr] = (period as string).split('-');
@@ -83,8 +83,7 @@ apiRouter.get('/transactions', async (req, res) => {
     if (isFixed && isFixed !== 'All') {
       conditions.push(eq(transactions.isFixed, isFixed === 'true'));
     }
-    
-    if (status && status !== 'All') {
+        if (status && status !== 'All') {
       conditions.push(eq(transactions.status, status as string));
     }
 
@@ -206,7 +205,8 @@ apiRouter.get('/budget/:period/all', async (req, res) => {
         eq(transactions.userId, userId),
         eq(transactions.type, 'EXPENSE'),
         gte(transactions.transactionDate, startDate),
-        lte(transactions.transactionDate, endDate)
+        lte(transactions.transactionDate, endDate),
+        ne(transactions.status, 'DELETED')
       )
     );
 
@@ -288,7 +288,7 @@ apiRouter.post('/transactions/manual', async (req, res) => {
 
 apiRouter.get('/templates', async (req, res) => {
   try {
-    const templates = await db.select().from(transactions).where(eq(transactions.isTemplate, true)).orderBy(desc(transactions.createdAt));
+    const templates = await db.select().from(transactions).where(and(eq(transactions.isTemplate, true), ne(transactions.status, 'DELETED'))).orderBy(desc(transactions.createdAt));
     res.json({ success: true, data: templates });
   } catch (error) {
     console.error(error);
@@ -359,7 +359,8 @@ apiRouter.get('/stats/runway', async (req: any, res) => {
     const txns = await db.select().from(transactions).where(
       and(
         eq(transactions.userId, defaultUserId),
-        sql`${transactions.transactionDate} >= ${ninetyDaysAgo.toISOString()}`
+        sql`${transactions.transactionDate} >= ${ninetyDaysAgo.toISOString()}`,
+        ne(transactions.status, 'DELETED')
       )
     );
     
@@ -426,12 +427,14 @@ apiRouter.get('/transactions/fix-salaries', async (req, res) => {
 apiRouter.delete('/transactions/:id', async (req, res) => {
   try {
     const userId = req.user.id;
-    await db.delete(transactions).where(
-      and(
-        eq(transactions.id, req.params.id),
-        eq(transactions.userId, userId)
-      )
-    );
+    await db.update(transactions)
+      .set({ status: 'DELETED' })
+      .where(
+        and(
+          eq(transactions.id, req.params.id),
+          eq(transactions.userId, userId)
+        )
+      );
     res.json({ success: true, message: "Transaction deleted successfully." });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

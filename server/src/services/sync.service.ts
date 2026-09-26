@@ -131,9 +131,15 @@ export async function performSync({ userId, isBackground = false }: SyncOptions)
              
              const isFixedTransaction = assignedCategoryId === basisCategory?.id;
              
+             let finalTransactionDate = new Date(txn.date);
+             // In Israel, salaries paid between 1st and 10th belong to the previous month
+             if (type === 'INCOME' && finalTransactionDate.getDate() <= 10 && (fullMerchant.includes('משכורת') || originalMerchantString.includes('משכורת'))) {
+               finalTransactionDate.setDate(0); // Shift to the last day of the previous month
+             }
+             
              await db.insert(transactions).values({
                userId,
-               transactionDate: new Date(txn.date),
+               transactionDate: finalTransactionDate,
                amount: amountStr,
                merchant: fullMerchant,
                originalMerchant: originalMerchantString,

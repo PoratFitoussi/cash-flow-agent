@@ -403,3 +403,19 @@ apiRouter.get('/transactions/cleanup-duplicates', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Endpoint to fix existing salary dates (shift to previous month)
+apiRouter.get('/transactions/fix-salaries', async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      UPDATE transactions
+      SET transaction_date = (date_trunc('month', transaction_date) - interval '1 day')
+      WHERE type = 'INCOME' 
+        AND extract(day from transaction_date) <= 10
+        AND (merchant ILIKE '%משכורת%' OR original_merchant ILIKE '%משכורת%')
+    `);
+    res.json({ success: true, message: "Salary dates fixed retroactively." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

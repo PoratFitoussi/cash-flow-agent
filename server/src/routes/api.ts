@@ -61,10 +61,12 @@ apiRouter.get('/transactions', async (req, res) => {
     if (period && period !== 'All') {
       const [yearStr, monthStr] = (period as string).split('-');
       if (yearStr && monthStr) {
-        const year = parseInt(yearStr, 10);
-        const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
-        const startOfMonth = new Date(year, month, 1);
-        const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        // Parse dates in Israel Time (UTC+3) so that midnight aligns correctly
+        const startOfMonth = new Date(`${yearStr}-${monthStr}-01T00:00:00+03:00`);
+        const endOfMonth = new Date(startOfMonth);
+        endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+        endOfMonth.setMilliseconds(-1);
+        
         conditions.push(gte(transactions.transactionDate, startOfMonth));
         conditions.push(lte(transactions.transactionDate, endOfMonth));
       }

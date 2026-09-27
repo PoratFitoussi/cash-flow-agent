@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function categorizeTransactionsBatch(merchants: string[]): Promise<Record<string, { categoryId: string, confidenceScore: number, expenseType: string }> | null> {
   const allCategories = await db.select().from(categories);

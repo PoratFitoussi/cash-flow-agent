@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useTransactions, useSync, useUpdateTransaction, useDeleteTransaction } from '@/features/transactions/useTransactions';
+import { useTransactions, useSync, useUpdateTransaction, useDeleteTransaction, useCategorizeAI } from '@/features/transactions/useTransactions';
 import { useCategories } from '@/features/categories/useCategories';
 import { formatDate } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +37,7 @@ function Dashboard() {
   const { data: transactions = [], isLoading } = useTransactions({ period });
   const { data: categories = [] } = useCategories();
   const syncMutation = useSync();
+  const categorizeMutation = useCategorizeAI();
   const updateTxMutation = useUpdateTransaction();
   const deleteTxMutation = useDeleteTransaction();
 

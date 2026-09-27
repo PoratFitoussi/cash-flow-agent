@@ -36,8 +36,9 @@ Return a strict JSON payload. The root object must be a map where the key is the
       systemInstruction: 'You are a helpful assistant designed to output strict JSON.'
     });
 
-    const content = result.response.text();
+    let content = result.response.text();
     if (!content) return null;
+    content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(content);
   } catch (error) {
     console.error("Error calling Gemini batch categorization:", error);
@@ -101,10 +102,14 @@ export async function processPendingTransactions() {
     
     const mapped = categoryMap.get(txn.merchant);
     if (mapped) {
-      await db.update(transactions)
-        .set({ categoryId: mapped.categoryId, expenseType: mapped.expenseType, status: 'CATEGORIZED' })
-        .where(eq(transactions.id, txn.id));
-      processedCount++;
+      try {
+        await db.update(transactions)
+          .set({ categoryId: mapped.categoryId, expenseType: mapped.expenseType, status: 'CATEGORIZED' })
+          .where(eq(transactions.id, txn.id));
+        processedCount++;
+      } catch (err) {
+        console.error(`Failed to update transaction ${txn.id} with category ${mapped.categoryId}:`, err);
+      }
     }
   }
 

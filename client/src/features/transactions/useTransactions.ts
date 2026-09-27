@@ -49,3 +49,20 @@ export function useDeleteTransaction() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
   });
 }
+
+export function useCategorizeAI() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetchAPI('/transactions/process-pending', { method: 'POST' });
+        alert(JSON.stringify(res, null, 2));
+        return res;
+      } catch (err: any) {
+        alert("Categorization Error: " + err.message);
+        throw err;
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
+  });
+}

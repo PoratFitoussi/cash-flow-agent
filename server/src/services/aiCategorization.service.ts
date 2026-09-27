@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
 export async function categorizeTransactionsBatch(merchants: string[]): Promise<Record<string, { categoryId: string, confidenceScore: number, expenseType: string }> | null> {
   const allCategories = await db.select().from(categories);
@@ -40,9 +40,9 @@ Return a strict JSON payload. The root object must be a map where the key is the
     if (!content) return null;
     content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(content);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling Gemini batch categorization:", error);
-    return null;
+    throw new Error(`Gemini API Error: ${error.message || error.toString()}`);
   }
 }
 

@@ -17,7 +17,13 @@ apiRouter.use(requireAuth);
 apiRouter.post('/sync', async (req: any, res) => {
   const userId = req.user.id;
   try {
-    const result = await performSync({ userId, isBackground: false });
+    let result = { insertedCount: 0 };
+    try {
+      result = await performSync({ userId, isBackground: false });
+    } catch (syncError) {
+      console.warn("Scraper failed, but proceeding to categorize pending transactions:", syncError);
+    }
+    await processPendingTransactions();
     res.json({ success: true, insertedCount: result.insertedCount });
   } catch (error: any) {
     console.error("Sync error:", error);

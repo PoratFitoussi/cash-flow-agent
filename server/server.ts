@@ -33,6 +33,7 @@ async function startServer() {
         CONSTRAINT "merchant_category_mappings_merchant_name_unique" UNIQUE("merchant_name")
       );
       
+      ALTER TABLE "merchant_category_mappings" ADD COLUMN IF NOT EXISTS "expense_type" varchar(20) DEFAULT 'WANT' NOT NULL;
       ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "original_merchant" varchar(255);
       ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "expense_type" varchar(20) DEFAULT 'WANT' NOT NULL;
       ALTER TABLE "transactions" DROP COLUMN IF EXISTS "is_fixed";

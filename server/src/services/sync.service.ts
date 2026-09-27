@@ -156,7 +156,6 @@ export async function performSync({ userId, isBackground = false }: SyncOptions)
        }
     }
     
-    await processPendingTransactions();
     return { success: true, insertedCount };
   } finally {
     if (isBackground && otpListener) {

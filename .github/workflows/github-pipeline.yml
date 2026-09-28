@@ -1,0 +1,28 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify API Deploy
+        run: |
+          if [ -n "${{ secrets.COOLIFY_API_WEBHOOK }}" ]; then
+            echo "Triggering API deployment..."
+            curl -X POST "${{ secrets.COOLIFY_API_WEBHOOK }}"
+          else
+            echo "Warning: COOLIFY_API_WEBHOOK secret is not set!"
+          fi
+
+      - name: Trigger Coolify Frontend Deploy
+        run: |
+          if [ -n "${{ secrets.COOLIFY_FRONTEND_WEBHOOK }}" ]; then
+            echo "Triggering Frontend deployment..."
+            curl -X POST "${{ secrets.COOLIFY_FRONTEND_WEBHOOK }}"
+          else
+            echo "Warning: COOLIFY_FRONTEND_WEBHOOK secret is not set!"
+          fi

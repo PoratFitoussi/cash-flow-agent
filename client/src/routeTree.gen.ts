@@ -9,180 +9,86 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BudgetRouteImport } from './routes/budget'
-import { Route as CashRouteImport } from './routes/cash'
-import { Route as CategoriesRouteImport } from './routes/categories'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ExpensesNewRouteImport } from './routes/expenses/new'
-import { Route as ExpensesUploadRouteImport } from './routes/expenses/upload'
+import { Route as BalanceRouteImport } from './routes/balance'
+import { Route as HomeIndexRouteImport } from './routes/home/index'
+import { Route as HomePeriodRouteImport } from './routes/home/$period'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BalanceRoute = BalanceRouteImport.update({
+  id: '/balance',
+  path: '/balance',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BudgetRoute = BudgetRouteImport.update({
-  id: '/budget',
-  path: '/budget',
+const HomeIndexRoute = HomeIndexRouteImport.update({
+  id: '/home/',
+  path: '/home/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CashRoute = CashRouteImport.update({
-  id: '/cash',
-  path: '/cash',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CategoriesRoute = CategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpensesNewRoute = ExpensesNewRouteImport.update({
-  id: '/expenses/new',
-  path: '/expenses/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpensesUploadRoute = ExpensesUploadRouteImport.update({
-  id: '/expenses/upload',
-  path: '/expenses/upload',
+const HomePeriodRoute = HomePeriodRouteImport.update({
+  id: '/home/$period',
+  path: '/home/$period',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/budget': typeof BudgetRoute
-  '/cash': typeof CashRoute
-  '/categories': typeof CategoriesRoute
-  '/settings': typeof SettingsRoute
-  '/expenses/new': typeof ExpensesNewRoute
-  '/expenses/upload': typeof ExpensesUploadRoute
+  '/balance': typeof BalanceRoute
+  '/home/$period': typeof HomePeriodRoute
+  '/home/': typeof HomeIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/budget': typeof BudgetRoute
-  '/cash': typeof CashRoute
-  '/categories': typeof CategoriesRoute
-  '/settings': typeof SettingsRoute
-  '/expenses/new': typeof ExpensesNewRoute
-  '/expenses/upload': typeof ExpensesUploadRoute
+  '/balance': typeof BalanceRoute
+  '/home/$period': typeof HomePeriodRoute
+  '/home': typeof HomeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/budget': typeof BudgetRoute
-  '/cash': typeof CashRoute
-  '/categories': typeof CategoriesRoute
-  '/settings': typeof SettingsRoute
-  '/expenses/new': typeof ExpensesNewRoute
-  '/expenses/upload': typeof ExpensesUploadRoute
+  '/balance': typeof BalanceRoute
+  '/home/$period': typeof HomePeriodRoute
+  '/home/': typeof HomeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/budget'
-    | '/cash'
-    | '/categories'
-    | '/settings'
-    | '/expenses/new'
-    | '/expenses/upload'
+  fullPaths: '/balance' | '/home/$period' | '/home/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/budget'
-    | '/cash'
-    | '/categories'
-    | '/settings'
-    | '/expenses/new'
-    | '/expenses/upload'
-  id:
-    | '__root__'
-    | '/'
-    | '/budget'
-    | '/cash'
-    | '/categories'
-    | '/settings'
-    | '/expenses/new'
-    | '/expenses/upload'
+  to: '/balance' | '/home/$period' | '/home'
+  id: '__root__' | '/balance' | '/home/$period' | '/home/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BudgetRoute: typeof BudgetRoute
-  CashRoute: typeof CashRoute
-  CategoriesRoute: typeof CategoriesRoute
-  SettingsRoute: typeof SettingsRoute
-  ExpensesNewRoute: typeof ExpensesNewRoute
-  ExpensesUploadRoute: typeof ExpensesUploadRoute
+  BalanceRoute: typeof BalanceRoute
+  HomePeriodRoute: typeof HomePeriodRoute
+  HomeIndexRoute: typeof HomeIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/balance': {
+      id: '/balance'
+      path: '/balance'
+      fullPath: '/balance'
+      preLoaderRoute: typeof BalanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/budget': {
-      id: '/budget'
-      path: '/budget'
-      fullPath: '/budget'
-      preLoaderRoute: typeof BudgetRouteImport
+    '/home/': {
+      id: '/home/'
+      path: '/home'
+      fullPath: '/home/'
+      preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cash': {
-      id: '/cash'
-      path: '/cash'
-      fullPath: '/cash'
-      preLoaderRoute: typeof CashRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/categories': {
-      id: '/categories'
-      path: '/categories'
-      fullPath: '/categories'
-      preLoaderRoute: typeof CategoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expenses/new': {
-      id: '/expenses/new'
-      path: '/expenses/new'
-      fullPath: '/expenses/new'
-      preLoaderRoute: typeof ExpensesNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expenses/upload': {
-      id: '/expenses/upload'
-      path: '/expenses/upload'
-      fullPath: '/expenses/upload'
-      preLoaderRoute: typeof ExpensesUploadRouteImport
+    '/home/$period': {
+      id: '/home/$period'
+      path: '/home/$period'
+      fullPath: '/home/$period'
+      preLoaderRoute: typeof HomePeriodRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BudgetRoute: BudgetRoute,
-  CashRoute: CashRoute,
-  CategoriesRoute: CategoriesRoute,
-  SettingsRoute: SettingsRoute,
-  ExpensesNewRoute: ExpensesNewRoute,
-  ExpensesUploadRoute: ExpensesUploadRoute,
+  BalanceRoute: BalanceRoute,
+  HomePeriodRoute: HomePeriodRoute,
+  HomeIndexRoute: HomeIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

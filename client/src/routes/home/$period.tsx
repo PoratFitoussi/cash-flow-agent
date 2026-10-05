@@ -188,7 +188,7 @@ function MonthlyOverview() {
               onClick={() => setIsAddCategoryOpen(true)}
               className="w-full mt-4 flex items-center justify-center p-4 border-2 border-dashed border-[#6571ff]/40 rounded-3xl hover:bg-[#6571ff]/5 transition-colors group relative"
             >
-              <span className="font-bold text-xl text-[#6571ff]">
+              <span className="font-extrabold text-xl text-indigo-600">
                 הוספת קטגוריה למעקב
               </span>
               <div className="absolute right-4 bg-[#6571ff] rounded-full p-1 text-white shadow-sm group-hover:scale-105 transition-transform">
